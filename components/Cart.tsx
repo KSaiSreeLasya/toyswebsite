@@ -1,0 +1,212 @@
+import React, { useState } from 'react';
+import { useStore } from '../context/StoreContext';
+import { Trash2, Plus, Minus, CreditCard, CheckCircle, ArrowRight, Loader2, MapPin, Phone } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+
+const Cart: React.FC = () => {
+  const { cart, removeFromCart, updateCartQuantity, placeOrder, user } = useStore();
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [orderComplete, setOrderComplete] = useState(false);
+  const navigate = useNavigate();
+
+  const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+  const tax = subtotal * 0.18; // GST roughly 18% in India for some toys
+  const total = subtotal + tax;
+
+  const handlePayment = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsProcessing(true);
+    // Simulate API call with a realistic delay for animation
+    setTimeout(() => {
+      placeOrder();
+      setIsProcessing(false);
+      setOrderComplete(true);
+    }, 2500);
+  };
+
+  if (orderComplete) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 animate-in zoom-in duration-500">
+        <div className="bg-green-100 p-6 rounded-full text-green-600 mb-6 animate-bounce-slow">
+          <CheckCircle size={64} />
+        </div>
+        <h2 className="text-3xl font-heading font-bold text-gray-800 mb-2">Order Confirmed!</h2>
+        <p className="text-gray-600 mb-8 text-center max-w-md">
+          Thank you for shopping at WonderLand! Your magical toys are being prepared for shipment.
+        </p>
+        <button 
+          onClick={() => navigate('/')}
+          className="bg-primary-600 text-white px-8 py-3 rounded-full font-bold hover:bg-primary-700 transition-colors shadow-lg hover:shadow-xl btn-funky"
+        >
+          Continue Shopping
+        </button>
+      </div>
+    );
+  }
+
+  if (cart.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="bg-gray-100 p-6 rounded-full text-gray-400 mb-4">
+          <CreditCard size={48} />
+        </div>
+        <h2 className="text-2xl font-bold text-gray-700 mb-2">Your Cart is Empty</h2>
+        <p className="text-gray-500 mb-6">Looks like you haven't found any treasures yet.</p>
+        <Link to="/" className="bg-primary-500 text-white px-6 py-2 rounded-full font-bold hover:bg-primary-600 shadow-md btn-funky">Start Exploring</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Cart Items */}
+      <div className="lg:col-span-2 space-y-4">
+        <h2 className="text-2xl font-bold font-heading mb-6">Shopping Cart</h2>
+        {cart.map((item) => (
+          <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4 items-center card-pop">
+            <img src={item.imageUrl} alt={item.name} className="w-24 h-24 object-cover rounded-lg bg-gray-50 border border-gray-100" />
+            <div className="flex-1">
+              <h3 className="font-bold text-gray-800">{item.name}</h3>
+              <p className="text-sm text-gray-500 mb-2">{item.category}</p>
+              <div className="flex items-center gap-2">
+                 <p className="font-bold text-primary-600">₹{item.price.toFixed(2)}</p>
+              </div>
+            </div>
+            <div className="flex flex-col items-end gap-3">
+              <div className="flex items-center gap-3 bg-gray-50 rounded-lg p-1 border border-gray-200">
+                <button 
+                  onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
+                  className="p-1 hover:bg-white rounded shadow-sm transition-all text-gray-600"
+                >
+                  <Minus size={14} />
+                </button>
+                <span className="font-bold w-6 text-center text-sm">{item.quantity}</span>
+                 <button 
+                  onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
+                  className="p-1 hover:bg-white rounded shadow-sm transition-all text-gray-600"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+              <button 
+                onClick={() => removeFromCart(item.id)}
+                className="text-gray-400 hover:text-red-500 transition-colors text-sm flex items-center gap-1"
+              >
+                <Trash2 size={14} /> Remove
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Checkout Section */}
+      <div className="lg:col-span-1">
+        <div className="bg-white p-6 rounded-xl shadow-lg border-2 border-primary-100 sticky top-24">
+          <h3 className="text-xl font-bold font-heading mb-6">Order Summary</h3>
+          
+          <div className="space-y-3 mb-6">
+            <div className="flex justify-between text-gray-600 font-medium">
+              <span>Subtotal</span>
+              <span>₹{subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-gray-600 font-medium">
+              <span>GST (18%)</span>
+              <span>₹{tax.toFixed(2)}</span>
+            </div>
+             <div className="flex justify-between text-gray-600 font-medium">
+              <span>Shipping</span>
+              <span className="text-green-600 font-bold">Free</span>
+            </div>
+            <div className="border-t-2 border-dashed border-gray-200 pt-3 flex justify-between font-black text-xl text-gray-800">
+              <span>Total</span>
+              <span>₹{total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          {!isCheckingOut ? (
+            <button 
+              onClick={() => {
+                if (!user) {
+                  navigate('/login');
+                } else {
+                  setIsCheckingOut(true);
+                }
+              }}
+              className="w-full bg-secondary-600 hover:bg-secondary-700 text-white font-bold py-3 px-4 rounded-xl transition-all shadow-md hover:shadow-lg flex justify-center items-center gap-2 btn-funky border-secondary-800"
+            >
+              Checkout <ArrowRight size={18} />
+            </button>
+          ) : (
+            <form onSubmit={handlePayment} className="space-y-4 animate-in slide-in-from-bottom-4">
+              
+              {/* Shipping Details Section */}
+              <div className="border-t-2 border-gray-100 pt-4 mt-4">
+                <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <MapPin size={18} className="text-secondary-500" /> Shipping Details
+                </h4>
+                <div className="space-y-3">
+                  <input required placeholder="Full Name" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                  <input required placeholder="Address Line 1" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                  <div className="grid grid-cols-2 gap-3">
+                     <input required placeholder="City" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                     <input required placeholder="ZIP Code" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                  </div>
+                  <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Phone size={14} className="text-gray-400" />
+                      </div>
+                      <input required type="tel" placeholder="Phone Number" className="w-full border-2 border-gray-200 rounded-xl pl-9 px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Section */}
+              <div className="border-t-2 border-gray-100 pt-4 mt-4">
+                <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
+                  <CreditCard size={18} className="text-secondary-500" /> Payment Details
+                </h4>
+                
+                <div className="space-y-3">
+                  <input required placeholder="Card Number" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <input required placeholder="MM/YY" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                    <input required placeholder="CVC" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                  </div>
+                  <input required placeholder="Cardholder Name" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                 <button 
+                  type="button"
+                  onClick={() => setIsCheckingOut(false)}
+                  disabled={isProcessing}
+                  className="flex-1 bg-gray-100 text-gray-700 font-bold py-2 rounded-xl hover:bg-gray-200 transition-colors border-2 border-transparent hover:border-gray-300"
+                >
+                  Back
+                </button>
+                <button 
+                  type="submit"
+                  disabled={isProcessing}
+                  className="flex-1 bg-green-500 text-white font-bold py-2 rounded-xl hover:bg-green-600 transition-all disabled:opacity-80 disabled:cursor-wait btn-funky border-green-700 flex justify-center items-center"
+                >
+                  {isProcessing ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 size={18} className="animate-spin" />
+                      <span>Processing...</span>
+                    </div>
+                  ) : (
+                    `Pay ₹${total.toFixed(2)}`
+                  )}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Cart;
