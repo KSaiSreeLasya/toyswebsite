@@ -70,6 +70,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const storedReturns = localStorage.getItem('wl_returns');
     const storedTeam = localStorage.getItem('wl_team');
     const storedPayment = localStorage.getItem('wl_payment_config');
+    const storedAccounts = localStorage.getItem('wl_accounts');
 
     if (storedUser) setUser(JSON.parse(storedUser));
     if (storedCart) setCart(JSON.parse(storedCart));
@@ -79,6 +80,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (storedReturns) setReturnsPolicy(storedReturns);
     if (storedTeam) setTeamMembers(JSON.parse(storedTeam));
     if (storedPayment) setPaymentConfig(JSON.parse(storedPayment));
+    if (storedAccounts) setUserAccounts(JSON.parse(storedAccounts));
   }, []);
 
   useEffect(() => {
