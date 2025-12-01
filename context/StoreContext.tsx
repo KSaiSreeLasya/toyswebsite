@@ -111,6 +111,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     localStorage.setItem('wl_payment_config', JSON.stringify(paymentConfig));
   }, [paymentConfig]);
 
+  useEffect(() => {
+    localStorage.setItem('wl_accounts', JSON.stringify(userAccounts));
+  }, [userAccounts]);
+
   // Persist User (and their wishlist) whenever user state changes
   useEffect(() => {
     if (user) {
