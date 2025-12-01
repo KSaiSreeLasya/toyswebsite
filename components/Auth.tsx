@@ -177,11 +177,6 @@ const Auth: React.FC = () => {
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm flex items-center gap-2">
-                  <AlertCircle size={16} /> {error}
-              </div>
-          )}
 
           <div className="rounded-md shadow-sm space-y-4">
              {/* Role Selection for Demo Purposes */}
