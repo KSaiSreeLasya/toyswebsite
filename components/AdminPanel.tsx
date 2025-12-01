@@ -42,7 +42,7 @@ const AdminPanel: React.FC = () => {
   const [deleteConfirmationId, setDeleteConfirmationId] = useState<string | null>(null);
 
   const [newProduct, setNewProduct] = useState<Partial<Product>>({
-    category: 'Construction',
+    category: '',
     name: '',
     price: 0,
     stock: 0,
