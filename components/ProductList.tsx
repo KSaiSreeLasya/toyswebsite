@@ -175,7 +175,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd, onToggleWishl
   const navigate = useNavigate();
   const isOutOfStock = product.stock <= 0;
 
-  const handleWishlistClick = () => {
+  const handleWishlistClick = (e: React.MouseEvent) => {
+      e.stopPropagation();
       if (!userLoggedIn) {
           navigate('/login');
       } else {
@@ -183,12 +184,19 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd, onToggleWishl
       }
   };
 
-  const handleNotifyMe = () => {
+  const handleNotifyMe = (e: React.MouseEvent) => {
+      e.stopPropagation();
       alert(`You'll be notified when "${product.name}" is back in stock!`);
   };
 
+  const handleCardClick = () => {
+      navigate(`/product/${product.id}`);
+  };
+
   return (
-    <div className="bg-white rounded-3xl overflow-hidden border-2 border-gray-100 hover:border-primary-200 card-pop h-full flex flex-col shadow-sm relative group">
+    <div
+      onClick={handleCardClick}
+      className="bg-white rounded-3xl overflow-hidden border-2 border-gray-100 hover:border-primary-200 card-pop h-full flex flex-col shadow-sm relative group cursor-pointer transition-all hover:shadow-lg">
       {/* Wishlist Button */}
       <button 
         onClick={handleWishlistClick}
