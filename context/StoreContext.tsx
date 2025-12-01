@@ -124,10 +124,19 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [user]);
 
-  const login = (email: string, role: UserRole) => {
+  const login = (email: string, password: string, role: UserRole) => {
+    // Find account with matching email and password
+    const account = userAccounts.find(
+      acc => acc.email.toLowerCase() === email.toLowerCase() && acc.password === password && acc.role === role
+    );
+
+    if (!account) {
+      return { success: false, error: 'Invalid email, password, or role. Please check your credentials.' };
+    }
+
     // Check if user exists in team members (for Admin role)
-    const existingTeamMember = role === UserRole.ADMIN 
-      ? teamMembers.find(m => m.email.toLowerCase() === email.toLowerCase()) 
+    const existingTeamMember = role === UserRole.ADMIN
+      ? teamMembers.find(m => m.email.toLowerCase() === email.toLowerCase())
       : null;
 
     let permissions: AdminPermission[] = [];
@@ -160,6 +169,34 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     setUser(newUser);
+    return { success: true };
+  };
+
+  const signup = (email: string, password: string, role: UserRole) => {
+    // Validate inputs
+    if (!email || !password) {
+      return { success: false, error: 'Email and password are required.' };
+    }
+
+    if (password.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters long.' };
+    }
+
+    // Check if account already exists
+    const existingAccount = userAccounts.find(
+      acc => acc.email.toLowerCase() === email.toLowerCase()
+    );
+
+    if (existingAccount) {
+      return { success: false, error: 'An account with this email already exists.' };
+    }
+
+    // Create new account
+    const newAccount = { email: email.toLowerCase(), password, role };
+    setUserAccounts(prev => [...prev, newAccount]);
+
+    // Automatically log in after signup
+    return login(email, password, role);
   };
 
   const logout = () => {
