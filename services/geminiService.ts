@@ -1,51 +1,58 @@
-import { GoogleGenAI } from "@google/genai";
 import { Product } from '../types';
 
-// Strict initialization using process.env.API_KEY directly as per guidelines
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 export const generateProductDescription = async (productName: string, category: string): Promise<string> => {
-  if (!process.env.API_KEY) return "API Key missing for AI generation.";
-  
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        Task: Write a SUPER FUN, EXCITING, and KID-FRIENDLY product description for a toy.
-        Product Name: "${productName}"
-        Category: "${category}"
-        Style: Use emojis 🚀, exciting words, and make it sound like the coolest toy ever. Max 2 short sentences.
-      `,
+    const response = await fetch(`${API_BASE_URL}/api/generate-description`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ productName, category }),
     });
-    return response.text ? response.text.trim() : "";
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('API Error:', error);
+      return error.error || 'Could not generate description at this time.';
+    }
+
+    const data = await response.json();
+    return data.description || '';
   } catch (error) {
-    console.error("Gemini Error:", error);
-    return "Could not generate description at this time.";
+    console.error('Error generating description:', error);
+    return 'Could not generate description at this time.';
   }
 };
 
 export const getGiftRecommendation = async (query: string, availableProducts: Product[]): Promise<string> => {
-  if (!process.env.API_KEY) return "I can't access my brain right now! (API Key missing)";
-
-  const productContext = availableProducts.map(p => `${p.name} (₹${p.price}, ${p.category})`).join('\n');
-
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: `
-        You are "Toy Geni", the most magical and fun shopping assistant for a kids' toy store! 🧞‍♂️✨
-        
-        Here is our treasure chest of toys:
-        ${productContext}
-
-        Friend's Query: "${query}"
-
-        Task: Recommend 1-2 specific toys from our list. Explain why they are AWESOME! Be super enthusiastic, use emojis, and keep it brief (under 50 words). If nothing matches perfectly, suggest the next most fun thing! Prices are in Indian Rupees (₹).
-      `,
+    const response = await fetch(`${API_BASE_URL}/api/gift-recommendation`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        query, 
+        availableProducts: availableProducts.map(p => ({
+          name: p.name,
+          price: p.price,
+          category: p.category,
+        })) 
+      }),
     });
-    return response.text ? response.text.trim() : "I couldn't think of anything to say.";
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('API Error:', error);
+      return error.error || 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
+    }
+
+    const data = await response.json();
+    return data.recommendation || "I couldn't think of anything to say.";
   } catch (error) {
-    console.error("Gemini Chat Error:", error);
-    return "I'm having trouble thinking of a recommendation right now. Try browsing the categories!";
+    console.error('Error getting recommendation:', error);
+    return 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
   }
 };
