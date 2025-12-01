@@ -292,7 +292,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   return (
     <StoreContext.Provider value={{
-      user, products, cart, orders, teamMembers, login, logout,
+      user, products, cart, orders, teamMembers, login, signup, logout,
       addToCart, removeFromCart, updateCartQuantity, clearCart,
       addProduct, updateProduct, deleteProduct, placeOrder, addTeamMember, removeTeamMember,
       toggleWishlist,
