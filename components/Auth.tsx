@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, Shield, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
 
 const Auth: React.FC = () => {
-  const { login } = useStore();
+  const { login, signup } = useStore();
   const navigate = useNavigate();
   const [view, setView] = useState<'login' | 'signup' | 'forgot'>('login');
   
