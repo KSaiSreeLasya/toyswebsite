@@ -22,36 +22,75 @@ const Auth: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
 
     if (!email || !password) {
-      setError('Email and password are required.');
+      Swal.fire({
+        icon: 'error',
+        title: 'Missing Information',
+        text: 'Email and password are required.',
+        confirmButtonColor: '#7c3aed',
+      });
       return;
     }
 
     if (view === 'signup') {
       if (password !== confirmPassword) {
-        setError("Passwords do not match!");
+        Swal.fire({
+          icon: 'error',
+          title: 'Passwords Do Not Match',
+          text: 'Please make sure your passwords match.',
+          confirmButtonColor: '#7c3aed',
+        });
         return;
       }
 
       const result = signup(email, password, role);
       if (!result.success) {
-        setError(result.error || 'Signup failed. Please try again.');
+        Swal.fire({
+          icon: 'error',
+          title: 'Signup Failed',
+          text: result.error || 'Signup failed. Please try again.',
+          confirmButtonColor: '#7c3aed',
+        });
         return;
       }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Account Created!',
+        text: `Welcome! Your account has been created successfully.`,
+        confirmButtonColor: '#10b981',
+      }).then(() => {
+        if (role === UserRole.ADMIN) {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
+      });
     } else {
       const result = login(email, password, role);
       if (!result.success) {
-        setError(result.error || 'Invalid credentials. Please try again.');
+        Swal.fire({
+          icon: 'error',
+          title: 'Login Failed',
+          text: result.error || 'Invalid credentials. Please try again.',
+          confirmButtonColor: '#7c3aed',
+        });
         return;
       }
-    }
 
-    if (role === UserRole.ADMIN) {
-      navigate('/admin');
-    } else {
-      navigate('/');
+      Swal.fire({
+        icon: 'success',
+        title: 'Welcome Back!',
+        text: 'You have been logged in successfully.',
+        confirmButtonColor: '#10b981',
+      }).then(() => {
+        if (role === UserRole.ADMIN) {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
+      });
     }
   };
 
