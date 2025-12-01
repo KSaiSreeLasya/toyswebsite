@@ -41,6 +41,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [orders, setOrders] = useState<Order[]>([]);
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // User accounts storage
+  const [userAccounts, setUserAccounts] = useState<Array<{ email: string; password: string; role: UserRole }>>([]);
   
   // Policies State
   const [shippingPolicy, setShippingPolicy] = useState(
