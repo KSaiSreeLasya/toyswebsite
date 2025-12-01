@@ -11,7 +11,8 @@ interface StoreContextType {
   shippingPolicy: string;
   returnsPolicy: string;
   paymentConfig: PaymentConfig;
-  login: (email: string, role: UserRole) => void;
+  login: (email: string, password: string, role: UserRole) => { success: boolean; error?: string };
+  signup: (email: string, password: string, role: UserRole) => { success: boolean; error?: string };
   logout: () => void;
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
