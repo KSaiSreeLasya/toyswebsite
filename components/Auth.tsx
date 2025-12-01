@@ -23,19 +23,34 @@ const Auth: React.FC = () => {
     e.preventDefault();
     setError('');
 
-    if (view === 'signup') {
-        if (password !== confirmPassword) {
-            setError("Passwords do not match!");
-            return;
-        }
+    if (!email || !password) {
+      setError('Email and password are required.');
+      return;
     }
 
-    // Simulate auth
-    login(email, role);
-    if (role === UserRole.ADMIN) {
-        navigate('/admin');
+    if (view === 'signup') {
+      if (password !== confirmPassword) {
+        setError("Passwords do not match!");
+        return;
+      }
+
+      const result = signup(email, password, role);
+      if (!result.success) {
+        setError(result.error || 'Signup failed. Please try again.');
+        return;
+      }
     } else {
-        navigate('/');
+      const result = login(email, password, role);
+      if (!result.success) {
+        setError(result.error || 'Invalid credentials. Please try again.');
+        return;
+      }
+    }
+
+    if (role === UserRole.ADMIN) {
+      navigate('/admin');
+    } else {
+      navigate('/');
     }
   };
 
