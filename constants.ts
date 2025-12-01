@@ -163,4 +163,29 @@ export const INITIAL_PRODUCTS: Product[] = [
   }
 ];
 
-export const CATEGORIES = ['All', 'Construction', 'Plush', 'Electronics', 'Educational', 'Playsets'];
+export const CATEGORIES = [
+  'All',
+  'Action Toys',
+  'Hobby Organizers & Craft',
+  'Puzzles and Cubes',
+  'Sports Toys',
+  'Musical Toys',
+  'LCD Writing Pads',
+  'Indoor Games',
+  'Electronic Kits',
+  'Art and Craft',
+  'Role Play Toys',
+  'Outdoor Toys',
+  'Tricycles and Rideons',
+  'Dolls & Doll Houses',
+  'Baby Toys',
+  'Soft Toys',
+  'Toy Vehicles',
+  'Novelty Toys',
+  'Learning and Educational',
+  'Construction',
+  'Plush',
+  'Electronics',
+  'Educational',
+  'Playsets'
+];
