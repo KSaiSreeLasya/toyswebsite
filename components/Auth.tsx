@@ -3,6 +3,7 @@ import { useStore } from '../context/StoreContext';
 import { UserRole } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, Shield, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 const Auth: React.FC = () => {
   const { login, signup } = useStore();
