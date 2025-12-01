@@ -94,7 +94,7 @@ const AdminPanel: React.FC = () => {
 
     // Reset Form
     setNewProduct({
-      category: 'Construction',
+      category: '',
       name: '',
       price: 0,
       stock: 0,
