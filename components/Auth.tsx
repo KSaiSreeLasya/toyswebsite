@@ -20,7 +20,7 @@ const Auth: React.FC = () => {
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!email || !password) {
@@ -44,7 +44,7 @@ const Auth: React.FC = () => {
         return;
       }
 
-      const result = signup(email, password, role);
+      const result = await signup(email, password, role);
       if (!result.success) {
         Swal.fire({
           icon: 'error',
@@ -68,7 +68,7 @@ const Auth: React.FC = () => {
         }
       });
     } else {
-      const result = login(email, password, role);
+      const result = await login(email, password, role);
       if (!result.success) {
         Swal.fire({
           icon: 'error',
