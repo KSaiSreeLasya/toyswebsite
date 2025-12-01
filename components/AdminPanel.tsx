@@ -120,7 +120,7 @@ const AdminPanel: React.FC = () => {
   const cancelEditing = () => {
     setEditingId(null);
     setNewProduct({
-      category: 'Construction',
+      category: '',
       name: '',
       price: 0,
       stock: 0,
