@@ -92,7 +92,7 @@ const ProductList: React.FC = () => {
             <div className="mb-8">
               <h4 className="font-bold text-sm text-gray-400 mb-4 uppercase tracking-wide">Category</h4>
               <div className="space-y-2">
-                {allCategories.map(cat => (
+                {allCategories.slice(0, expandCategories ? allCategories.length : categoryDisplayLimit).map(cat => (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
@@ -102,6 +102,14 @@ const ProductList: React.FC = () => {
                   </button>
                 ))}
               </div>
+              {allCategories.length > categoryDisplayLimit && (
+                <button
+                  onClick={() => setExpandCategories(!expandCategories)}
+                  className="mt-4 w-full text-center text-sm font-bold text-primary-600 hover:text-primary-700 py-2 px-4 rounded-xl hover:bg-primary-50 transition-colors"
+                >
+                  {expandCategories ? '▼ View Less' : '▶ View More'}
+                </button>
+              )}
             </div>
 
             <div>
