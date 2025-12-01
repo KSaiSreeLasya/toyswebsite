@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { UserRole } from '../types';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, Shield, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react';
+import { Lock, Mail, Shield, ArrowLeft, CheckCircle } from 'lucide-react';
+import Swal from 'sweetalert2';
 
 const Auth: React.FC = () => {
-  const { login } = useStore();
+  const { login, signup } = useStore();
   const navigate = useNavigate();
   const [view, setView] = useState<'login' | 'signup' | 'forgot'>('login');
   
@@ -19,23 +20,77 @@ const Auth: React.FC = () => {
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
 
-    if (view === 'signup') {
-        if (password !== confirmPassword) {
-            setError("Passwords do not match!");
-            return;
-        }
+    if (!email || !password) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Missing Information',
+        text: 'Email and password are required.',
+        confirmButtonColor: '#7c3aed',
+      });
+      return;
     }
 
-    // Simulate auth
-    login(email, role);
-    if (role === UserRole.ADMIN) {
-        navigate('/admin');
+    if (view === 'signup') {
+      if (password !== confirmPassword) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Passwords Do Not Match',
+          text: 'Please make sure your passwords match.',
+          confirmButtonColor: '#7c3aed',
+        });
+        return;
+      }
+
+      const result = await signup(email, password, role);
+      if (!result.success) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Signup Failed',
+          text: result.error || 'Signup failed. Please try again.',
+          confirmButtonColor: '#7c3aed',
+        });
+        return;
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Account Created!',
+        text: `Welcome! Your account has been created successfully.`,
+        confirmButtonColor: '#10b981',
+      }).then(() => {
+        if (role === UserRole.ADMIN) {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
+      });
     } else {
-        navigate('/');
+      const result = await login(email, password, role);
+      if (!result.success) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Login Failed',
+          text: result.error || 'Invalid credentials. Please try again.',
+          confirmButtonColor: '#7c3aed',
+        });
+        return;
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Welcome Back!',
+        text: 'You have been logged in successfully.',
+        confirmButtonColor: '#10b981',
+      }).then(() => {
+        if (role === UserRole.ADMIN) {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
+      });
     }
   };
 
@@ -122,11 +177,6 @@ const Auth: React.FC = () => {
         </div>
         
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          {error && (
-              <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg text-sm flex items-center gap-2">
-                  <AlertCircle size={16} /> {error}
-              </div>
-          )}
 
           <div className="rounded-md shadow-sm space-y-4">
              {/* Role Selection for Demo Purposes */}

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Product, CartItem, User, UserRole, Order, AdminPermission, PaymentConfig } from '../types';
 import { INITIAL_PRODUCTS } from '../constants';
+import { signUp, signIn } from '../services/supabaseService';
 
 interface StoreContextType {
   user: User | null;
@@ -11,7 +12,8 @@ interface StoreContextType {
   shippingPolicy: string;
   returnsPolicy: string;
   paymentConfig: PaymentConfig;
-  login: (email: string, role: UserRole) => void;
+  login: (email: string, password: string, role: UserRole) => { success: boolean; error?: string };
+  signup: (email: string, password: string, role: UserRole) => { success: boolean; error?: string };
   logout: () => void;
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
@@ -40,6 +42,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [orders, setOrders] = useState<Order[]>([]);
   const [teamMembers, setTeamMembers] = useState<User[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // User accounts storage
+  const [userAccounts, setUserAccounts] = useState<Array<{ email: string; password: string; role: UserRole }>>([]);
   
   // Policies State
   const [shippingPolicy, setShippingPolicy] = useState(
@@ -66,6 +71,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const storedReturns = localStorage.getItem('wl_returns');
     const storedTeam = localStorage.getItem('wl_team');
     const storedPayment = localStorage.getItem('wl_payment_config');
+    const storedAccounts = localStorage.getItem('wl_accounts');
 
     if (storedUser) setUser(JSON.parse(storedUser));
     if (storedCart) setCart(JSON.parse(storedCart));
@@ -75,6 +81,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (storedReturns) setReturnsPolicy(storedReturns);
     if (storedTeam) setTeamMembers(JSON.parse(storedTeam));
     if (storedPayment) setPaymentConfig(JSON.parse(storedPayment));
+    if (storedAccounts) setUserAccounts(JSON.parse(storedAccounts));
   }, []);
 
   useEffect(() => {
@@ -105,6 +112,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     localStorage.setItem('wl_payment_config', JSON.stringify(paymentConfig));
   }, [paymentConfig]);
 
+  useEffect(() => {
+    localStorage.setItem('wl_accounts', JSON.stringify(userAccounts));
+  }, [userAccounts]);
+
   // Persist User (and their wishlist) whenever user state changes
   useEffect(() => {
     if (user) {
@@ -114,10 +125,22 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [user]);
 
-  const login = (email: string, role: UserRole) => {
+  const login = async (email: string, password: string, role: UserRole) => {
+    // Validate inputs
+    if (!email || !password) {
+      return { success: false, error: 'Email and password are required.' };
+    }
+
+    // Sign in with Supabase
+    const result = await signIn(email, password, role);
+
+    if (!result.success) {
+      return { success: false, error: result.error || 'Invalid credentials. Please try again.' };
+    }
+
     // Check if user exists in team members (for Admin role)
-    const existingTeamMember = role === UserRole.ADMIN 
-      ? teamMembers.find(m => m.email.toLowerCase() === email.toLowerCase()) 
+    const existingTeamMember = role === UserRole.ADMIN
+      ? teamMembers.find(m => m.email.toLowerCase() === email.toLowerCase())
       : null;
 
     let permissions: AdminPermission[] = [];
@@ -130,7 +153,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     }
 
-    // Try to recover a customer's previous session (mock db lookup)
+    // Try to recover a customer's previous session
     const storedUserStr = localStorage.getItem('wl_user');
     let previousWishlist: string[] = [];
     if (storedUserStr) {
@@ -141,8 +164,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
 
     const newUser: User = existingTeamMember || {
-      id: Date.now().toString(),
-      name: email.split('@')[0],
+      id: result.user?.id || Date.now().toString(),
+      name: result.user?.name || email.split('@')[0],
       email,
       role,
       permissions,
@@ -150,6 +173,28 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     setUser(newUser);
+    return { success: true };
+  };
+
+  const signup = async (email: string, password: string, role: UserRole) => {
+    // Validate inputs
+    if (!email || !password) {
+      return { success: false, error: 'Email and password are required.' };
+    }
+
+    if (password.length < 6) {
+      return { success: false, error: 'Password must be at least 6 characters long.' };
+    }
+
+    // Sign up with Supabase
+    const result = await signUp(email, password, role);
+
+    if (!result.success) {
+      return { success: false, error: result.error || 'Signup failed. Please try again.' };
+    }
+
+    // Automatically log in after signup
+    return login(email, password, role);
   };
 
   const logout = () => {
@@ -245,7 +290,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   return (
     <StoreContext.Provider value={{
-      user, products, cart, orders, teamMembers, login, logout,
+      user, products, cart, orders, teamMembers, login, signup, logout,
       addToCart, removeFromCart, updateCartQuantity, clearCart,
       addProduct, updateProduct, deleteProduct, placeOrder, addTeamMember, removeTeamMember,
       toggleWishlist,
