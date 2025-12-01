@@ -125,14 +125,17 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [user]);
 
-  const login = (email: string, password: string, role: UserRole) => {
-    // Find account with matching email and password
-    const account = userAccounts.find(
-      acc => acc.email.toLowerCase() === email.toLowerCase() && acc.password === password && acc.role === role
-    );
+  const login = async (email: string, password: string, role: UserRole) => {
+    // Validate inputs
+    if (!email || !password) {
+      return { success: false, error: 'Email and password are required.' };
+    }
 
-    if (!account) {
-      return { success: false, error: 'Invalid email, password, or role. Please check your credentials.' };
+    // Sign in with Supabase
+    const result = await signIn(email, password, role);
+
+    if (!result.success) {
+      return { success: false, error: result.error || 'Invalid credentials. Please try again.' };
     }
 
     // Check if user exists in team members (for Admin role)
@@ -150,7 +153,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     }
 
-    // Try to recover a customer's previous session (mock db lookup)
+    // Try to recover a customer's previous session
     const storedUserStr = localStorage.getItem('wl_user');
     let previousWishlist: string[] = [];
     if (storedUserStr) {
@@ -161,8 +164,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
 
     const newUser: User = existingTeamMember || {
-      id: Date.now().toString(),
-      name: email.split('@')[0],
+      id: result.user?.id || Date.now().toString(),
+      name: result.user?.name || email.split('@')[0],
       email,
       role,
       permissions,
@@ -173,7 +176,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return { success: true };
   };
 
-  const signup = (email: string, password: string, role: UserRole) => {
+  const signup = async (email: string, password: string, role: UserRole) => {
     // Validate inputs
     if (!email || !password) {
       return { success: false, error: 'Email and password are required.' };
@@ -183,18 +186,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       return { success: false, error: 'Password must be at least 6 characters long.' };
     }
 
-    // Check if account already exists
-    const existingAccount = userAccounts.find(
-      acc => acc.email.toLowerCase() === email.toLowerCase()
-    );
+    // Sign up with Supabase
+    const result = await signUp(email, password, role);
 
-    if (existingAccount) {
-      return { success: false, error: 'An account with this email already exists.' };
+    if (!result.success) {
+      return { success: false, error: result.error || 'Signup failed. Please try again.' };
     }
-
-    // Create new account
-    const newAccount = { email: email.toLowerCase(), password, role };
-    setUserAccounts(prev => [...prev, newAccount]);
 
     // Automatically log in after signup
     return login(email, password, role);
