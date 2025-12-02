@@ -116,10 +116,15 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         if (!adminSetupDone) {
           try {
             const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
             const response = await fetch(`${apiUrl}/api/setup-admin`, {
               method: 'POST',
-              timeout: 5000
+              signal: controller.signal
             });
+            clearTimeout(timeoutId);
+
             if (response.ok) {
               sessionStorage.setItem('admin_setup_done', 'true');
             }
