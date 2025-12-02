@@ -4,7 +4,12 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase credentials not found. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
+  console.error('Supabase credentials not found!', {
+    url: supabaseUrl ? 'found' : 'MISSING',
+    key: supabaseAnonKey ? 'found' : 'MISSING'
+  });
+} else {
+  console.log('Supabase initialized with URL:', supabaseUrl);
 }
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -12,7 +17,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export interface UserAccount {
   id?: string;
   email: string;
-  password?: string;
   role: 'CUSTOMER' | 'ADMIN';
   name: string;
   created_at?: string;
@@ -20,31 +24,52 @@ export interface UserAccount {
 
 export const signUp = async (email: string, password: string, role: 'CUSTOMER' | 'ADMIN'): Promise<{ success: boolean; error?: string; user?: UserAccount }> => {
   try {
-    // Check if user already exists
-    const { data: existingUser } = await supabase
+    const emailLower = email.toLowerCase();
+    const roleLower = role.toLowerCase();
+
+    // Check if user already exists in users table
+    const { data: existingUser, error: checkError } = await supabase
       .from('users')
       .select('id')
-      .eq('email', email.toLowerCase())
-      .single();
+      .eq('email', emailLower);
 
-    if (existingUser) {
+    if (checkError) {
+      return { success: false, error: checkError.message };
+    }
+
+    if (existingUser && existingUser.length > 0) {
       return { success: false, error: 'An account with this email already exists.' };
     }
 
-    // Insert new user
-    const { data: newUser, error } = await supabase
+    // Create auth user
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: emailLower,
+      password,
+    });
+
+    if (authError) {
+      console.error('Signup auth error:', authError);
+      return { success: false, error: authError.message || 'Signup failed.' };
+    }
+
+    if (!authData.user) {
+      return { success: false, error: 'Signup failed: No user created.' };
+    }
+
+    // Insert user record in users table
+    const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
-        email: email.toLowerCase(),
-        password,
-        role,
-        name: email.split('@')[0],
+        id: authData.user.id,
+        email: emailLower,
+        role: roleLower,
+        name: emailLower.split('@')[0],
       })
       .select()
       .single();
 
-    if (error) {
-      return { success: false, error: error.message };
+    if (insertError) {
+      return { success: false, error: insertError.message };
     }
 
     return { success: true, user: newUser };
@@ -55,20 +80,90 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
 
 export const signIn = async (email: string, password: string, role: 'CUSTOMER' | 'ADMIN'): Promise<{ success: boolean; error?: string; user?: UserAccount }> => {
   try {
-    const { data: user, error } = await supabase
+    const emailLower = email.toLowerCase();
+    const roleLower = role.toLowerCase();
+
+    // Authenticate with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: emailLower,
+      password,
+    });
+
+    if (authError) {
+      console.error('Auth error details:', authError);
+      return { success: false, error: authError.message || 'Authentication failed.' };
+    }
+
+    if (!authData.user) {
+      return { success: false, error: 'Invalid email or password.' };
+    }
+
+    // Get user record from users table
+    let { data: user, error: selectError } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email.toLowerCase())
-      .eq('password', password)
-      .eq('role', role)
+      .eq('id', authData.user.id)
+      .eq('role', roleLower)
       .single();
 
-    if (error || !user) {
-      return { success: false, error: 'Invalid email, password, or role. Please check your credentials.' };
+    // If user record doesn't exist, create it
+    if ((selectError || !user) && authData.user.id) {
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: emailLower,
+          role: roleLower,
+          name: emailLower.split('@')[0],
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        return { success: false, error: `User record creation failed: ${insertError.message}` };
+      }
+
+      user = newUser;
+    } else if (selectError) {
+      return { success: false, error: 'User not found.' };
     }
 
     return { success: true, user };
   } catch (err) {
     return { success: false, error: 'Login failed. Please try again.' };
+  }
+};
+
+export const signOut = async (): Promise<void> => {
+  await supabase.auth.signOut();
+};
+
+export const initializeAdminUser = async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    const adminEmail = 'admin@gmail.com';
+    const adminPassword = 'admin2024';
+
+    // Check if admin user already exists in the database
+    const { data: existingAdmin, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', adminEmail)
+      .eq('role', 'admin');
+
+    if (!checkError && existingAdmin && existingAdmin.length > 0) {
+      return { success: true, message: 'Admin user already exists.' };
+    }
+
+    // Try to sign up the admin user
+    const signUpResult = await signUp(adminEmail, adminPassword, 'ADMIN');
+
+    if (signUpResult.success) {
+      return { success: true, message: 'Admin user created successfully.' };
+    } else {
+      return { success: false, message: signUpResult.error || 'Failed to create admin user.' };
+    }
+  } catch (error) {
+    console.error('Initialize Admin Error:', error);
+    return { success: false, message: 'Error initializing admin user.' };
   }
 };

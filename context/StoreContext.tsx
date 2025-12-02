@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Product, CartItem, User, UserRole, Order, AdminPermission, PaymentConfig } from '../types';
 import { INITIAL_PRODUCTS } from '../constants';
-import { signUp, signIn } from '../services/supabaseService';
+import { signUp, signIn, signOut } from '../services/supabaseService';
 
 interface StoreContextType {
   user: User | null;
@@ -82,6 +82,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (storedTeam) setTeamMembers(JSON.parse(storedTeam));
     if (storedPayment) setPaymentConfig(JSON.parse(storedPayment));
     if (storedAccounts) setUserAccounts(JSON.parse(storedAccounts));
+
+    // Initialize admin user (only once per session)
+    const adminSetupDone = sessionStorage.getItem('admin_setup_done');
+    if (!adminSetupDone) {
+      fetch('http://localhost:5000/api/setup-admin', { method: 'POST' })
+        .then(() => sessionStorage.setItem('admin_setup_done', 'true'))
+        .catch(err => console.log('Admin setup attempt:', err));
+    }
   }, []);
 
   useEffect(() => {
@@ -197,9 +205,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return login(email, password, role);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await signOut();
     setUser(null);
-    setCart([]); 
+    setCart([]);
   };
 
   const addToCart = (product: Product) => {
