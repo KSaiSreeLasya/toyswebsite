@@ -425,8 +425,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const updatedOrders = [...orders, newOrder];
       setOrders(updatedOrders);
 
-      // Immediately persist to localStorage
-      localStorage.setItem('wl_orders', JSON.stringify(updatedOrders));
+      // Immediately persist to user-specific localStorage
+      const userOrdersKey = `wl_orders_${user.id}`;
+      localStorage.setItem(userOrdersKey, JSON.stringify(updatedOrders));
 
       // Decrease stock for purchased items
       setProducts(prev => prev.map(p => {
