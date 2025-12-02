@@ -119,7 +119,7 @@ app.post('/api/setup-admin', async (req: Request, res: Response) => {
         .from('users')
         .select('*')
         .eq('email', adminEmail)
-        .eq('role', 'ADMIN')
+        .eq('role', 'admin')
         .single();
 
       if (adminProfile) {
@@ -160,7 +160,7 @@ app.post('/api/setup-admin', async (req: Request, res: Response) => {
       .upsert({
         id: authUserId,
         email: adminEmail,
-        role: 'ADMIN',
+        role: 'admin',
         name: 'Admin',
       }, { onConflict: 'id' });
 
