@@ -84,15 +84,33 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     }
 
     // Get user record from users table
-    const { data: user, error: selectError } = await supabase
+    let { data: user, error: selectError } = await supabase
       .from('users')
       .select('*')
       .eq('id', authData.user.id)
       .eq('role', roleLower)
       .single();
 
-    if (selectError || !user) {
-      return { success: false, error: 'User not found or incorrect role.' };
+    // If user record doesn't exist, create it
+    if ((selectError || !user) && authData.user.id) {
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: emailLower,
+          role: roleLower,
+          name: emailLower.split('@')[0],
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        return { success: false, error: `User record creation failed: ${insertError.message}` };
+      }
+
+      user = newUser;
+    } else if (selectError) {
+      return { success: false, error: 'User not found.' };
     }
 
     return { success: true, user };
