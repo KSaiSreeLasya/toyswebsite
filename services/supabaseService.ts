@@ -47,8 +47,13 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       password,
     });
 
-    if (authError || !authData.user) {
-      return { success: false, error: authError?.message || 'Signup failed.' };
+    if (authError) {
+      console.error('Signup auth error:', authError);
+      return { success: false, error: authError.message || 'Signup failed.' };
+    }
+
+    if (!authData.user) {
+      return { success: false, error: 'Signup failed: No user created.' };
     }
 
     // Insert user record in users table
