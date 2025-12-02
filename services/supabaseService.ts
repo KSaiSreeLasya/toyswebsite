@@ -12,7 +12,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export interface UserAccount {
   id?: string;
   email: string;
-  password?: string;
   role: 'CUSTOMER' | 'ADMIN';
   name: string;
   created_at?: string;
@@ -20,31 +19,46 @@ export interface UserAccount {
 
 export const signUp = async (email: string, password: string, role: 'CUSTOMER' | 'ADMIN'): Promise<{ success: boolean; error?: string; user?: UserAccount }> => {
   try {
-    // Check if user already exists
-    const { data: existingUser } = await supabase
+    const emailLower = email.toLowerCase();
+
+    // Check if user already exists in users table
+    const { data: existingUser, error: checkError } = await supabase
       .from('users')
       .select('id')
-      .eq('email', email.toLowerCase())
-      .single();
+      .eq('email', emailLower);
 
-    if (existingUser) {
+    if (checkError) {
+      return { success: false, error: checkError.message };
+    }
+
+    if (existingUser && existingUser.length > 0) {
       return { success: false, error: 'An account with this email already exists.' };
     }
 
-    // Insert new user
-    const { data: newUser, error } = await supabase
+    // Create auth user
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: emailLower,
+      password,
+    });
+
+    if (authError || !authData.user) {
+      return { success: false, error: authError?.message || 'Signup failed.' };
+    }
+
+    // Insert user record in users table
+    const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
-        email: email.toLowerCase(),
-        password,
+        id: authData.user.id,
+        email: emailLower,
         role,
-        name: email.split('@')[0],
+        name: emailLower.split('@')[0],
       })
       .select()
       .single();
 
-    if (error) {
-      return { success: false, error: error.message };
+    if (insertError) {
+      return { success: false, error: insertError.message };
     }
 
     return { success: true, user: newUser };
@@ -55,20 +69,36 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
 
 export const signIn = async (email: string, password: string, role: 'CUSTOMER' | 'ADMIN'): Promise<{ success: boolean; error?: string; user?: UserAccount }> => {
   try {
-    const { data: user, error } = await supabase
+    const emailLower = email.toLowerCase();
+
+    // Authenticate with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: emailLower,
+      password,
+    });
+
+    if (authError || !authData.user) {
+      return { success: false, error: 'Invalid email or password.' };
+    }
+
+    // Get user record from users table
+    const { data: user, error: selectError } = await supabase
       .from('users')
       .select('*')
-      .eq('email', email.toLowerCase())
-      .eq('password', password)
+      .eq('id', authData.user.id)
       .eq('role', role)
       .single();
 
-    if (error || !user) {
-      return { success: false, error: 'Invalid email, password, or role. Please check your credentials.' };
+    if (selectError || !user) {
+      return { success: false, error: 'User not found or incorrect role.' };
     }
 
     return { success: true, user };
   } catch (err) {
     return { success: false, error: 'Login failed. Please try again.' };
   }
+};
+
+export const signOut = async (): Promise<void> => {
+  await supabase.auth.signOut();
 };
