@@ -1,8 +1,13 @@
-import { supabase } from './supabaseService';
+import { supabase, isSupabaseEnabled } from './supabaseService';
 import { CartItem } from '../types';
 
 export const addToCartDatabase = async (userId: string, product: CartItem): Promise<boolean> => {
   try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, skipping cart sync');
+      return true;
+    }
+
     const { error } = await supabase
       .from('cart_items')
       .upsert({
