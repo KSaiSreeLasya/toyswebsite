@@ -82,6 +82,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (storedTeam) setTeamMembers(JSON.parse(storedTeam));
     if (storedPayment) setPaymentConfig(JSON.parse(storedPayment));
     if (storedAccounts) setUserAccounts(JSON.parse(storedAccounts));
+
+    // Initialize admin user (only once per session)
+    const adminSetupDone = sessionStorage.getItem('admin_setup_done');
+    if (!adminSetupDone) {
+      fetch('http://localhost:5000/api/setup-admin', { method: 'POST' })
+        .then(() => sessionStorage.setItem('admin_setup_done', 'true'))
+        .catch(err => console.log('Admin setup attempt:', err));
+    }
   }, []);
 
   useEffect(() => {
