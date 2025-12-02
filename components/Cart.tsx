@@ -8,11 +8,15 @@ const Cart: React.FC = () => {
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [orderComplete, setOrderComplete] = useState(false);
+  const [useCoins, setUseCoins] = useState(false);
+  const [coinsUsed, setCoinsUsed] = useState(0);
   const navigate = useNavigate();
 
+  const availableCoins = 74;
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const tax = subtotal * 0.18; // GST roughly 18% in India for some toys
-  const total = subtotal + tax;
+  const coinDiscount = useCoins ? coinsUsed : 0;
+  const total = Math.max(0, subtotal + tax - coinDiscount);
 
   const handlePayment = (e: React.FormEvent) => {
     e.preventDefault();
