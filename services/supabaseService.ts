@@ -39,6 +39,11 @@ export interface UserAccount {
 
 export const signUp = async (email: string, password: string, role: 'CUSTOMER' | 'ADMIN'): Promise<{ success: boolean; error?: string; user?: UserAccount }> => {
   try {
+    if (!isSupabaseConfigured) {
+      console.warn('Supabase not configured for signup');
+      return { success: false, error: 'Database not configured. Please configure Supabase.' };
+    }
+
     const emailLower = email.toLowerCase();
     const roleLower = role.toLowerCase();
 
