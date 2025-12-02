@@ -33,15 +33,28 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     const emailLower = email.toLowerCase();
     const roleLower = role.toLowerCase();
 
+    console.log('Attempting signup for:', emailLower);
+
     // Check if user already exists in users table
-    const { data: existingUser, error: checkError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', emailLower);
+    let existingUser: any = null;
+    let checkError: any = null;
+
+    try {
+      const response = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', emailLower);
+
+      existingUser = response.data;
+      checkError = response.error;
+    } catch (e) {
+      console.error('Check user exception:', e);
+      checkError = e;
+    }
 
     if (checkError) {
       console.error('Check user error:', checkError);
-      return { success: false, error: checkError.message };
+      return { success: false, error: checkError.message || 'Failed to check existing user.' };
     }
 
     if (existingUser && existingUser.length > 0) {
@@ -58,8 +71,11 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       });
       authData = response.data;
       authError = response.error;
-    } catch (e) {
+    } catch (e: any) {
       console.error('Signup auth exception:', e);
+      if (e.message?.includes('body stream')) {
+        return { success: false, error: 'Authentication service temporarily unavailable.' };
+      }
       return { success: false, error: 'Failed to create account. Please try again.' };
     }
 
@@ -72,23 +88,36 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       return { success: false, error: 'Signup failed: No user created.' };
     }
 
+    console.log('Auth signup successful, creating user profile');
+
     // Insert user record in users table
-    const { data: newUser, error: insertError } = await supabase
-      .from('users')
-      .insert({
-        id: authData.user.id,
-        email: emailLower,
-        role: roleLower,
-        name: emailLower.split('@')[0],
-      })
-      .select()
-      .single();
+    let newUser: any;
+    let insertError: any;
+    try {
+      const response = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: emailLower,
+          role: roleLower,
+          name: emailLower.split('@')[0],
+        })
+        .select()
+        .single();
+
+      newUser = response.data;
+      insertError = response.error;
+    } catch (e) {
+      console.error('Insert exception:', e);
+      insertError = e;
+    }
 
     if (insertError) {
       console.error('Insert user error:', insertError);
-      return { success: false, error: insertError.message };
+      return { success: false, error: insertError.message || 'Failed to create user profile.' };
     }
 
+    console.log('Signup successful');
     return { success: true, user: newUser };
   } catch (err) {
     console.error('Signup exception:', err);
