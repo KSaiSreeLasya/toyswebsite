@@ -136,6 +136,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 Cart
                 <span className="bg-accent-500 text-white text-xs rounded-full px-2 py-0.5">{cartCount}</span>
               </Link>
+              {user && (
+                <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="block text-primary-600 font-bold p-2 hover:bg-primary-50 rounded-lg">My Profile</Link>
+              )}
               {user?.role === UserRole.ADMIN && (
                 <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="block text-secondary-600 font-bold p-2 hover:bg-secondary-50 rounded-lg">Admin Dashboard</Link>
               )}
