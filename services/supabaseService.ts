@@ -36,25 +36,13 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     console.log('Attempting signup for:', emailLower);
 
     // Check if user already exists in users table
-    let existingUser: any = null;
-    let checkError: any = null;
-
-    try {
-      const response = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', emailLower);
-
-      existingUser = response.data;
-      checkError = response.error;
-    } catch (e) {
-      console.error('Check user exception:', e);
-      checkError = e;
-    }
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', emailLower);
 
     if (checkError) {
       console.error('Check user error:', checkError);
-      return { success: false, error: checkError.message || 'Failed to check existing user.' };
     }
 
     if (existingUser && existingUser.length > 0) {
@@ -62,22 +50,10 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     }
 
     // Create auth user
-    let authData: any;
-    let authError: any;
-    try {
-      const response = await supabase.auth.signUp({
-        email: emailLower,
-        password,
-      });
-      authData = response.data;
-      authError = response.error;
-    } catch (e: any) {
-      console.error('Signup auth exception:', e);
-      if (e.message?.includes('body stream')) {
-        return { success: false, error: 'Authentication service temporarily unavailable.' };
-      }
-      return { success: false, error: 'Failed to create account. Please try again.' };
-    }
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: emailLower,
+      password,
+    });
 
     if (authError) {
       console.error('Signup auth error:', authError);
@@ -91,26 +67,16 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     console.log('Auth signup successful, creating user profile');
 
     // Insert user record in users table
-    let newUser: any;
-    let insertError: any;
-    try {
-      const response = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email: emailLower,
-          role: roleLower,
-          name: emailLower.split('@')[0],
-        })
-        .select()
-        .single();
-
-      newUser = response.data;
-      insertError = response.error;
-    } catch (e) {
-      console.error('Insert exception:', e);
-      insertError = e;
-    }
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert({
+        id: authData.user.id,
+        email: emailLower,
+        role: roleLower,
+        name: emailLower.split('@')[0],
+      })
+      .select()
+      .single();
 
     if (insertError) {
       console.error('Insert user error:', insertError);
