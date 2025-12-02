@@ -150,8 +150,15 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [cart]);
 
   useEffect(() => {
-    localStorage.setItem('wl_orders', JSON.stringify(orders));
-  }, [orders]);
+    if (user) {
+      // Save user-specific orders
+      const userOrdersKey = `wl_orders_${user.id}`;
+      localStorage.setItem(userOrdersKey, JSON.stringify(orders));
+    } else {
+      // If no user is logged in, save to global key (for anonymous browsing)
+      localStorage.setItem('wl_orders', JSON.stringify(orders));
+    }
+  }, [orders, user]);
 
   useEffect(() => {
     localStorage.setItem('wl_products', JSON.stringify(products));
