@@ -381,15 +381,22 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const placeOrder = async () => {
-    if (!user) return;
+    if (!user) {
+      throw new Error('User not logged in');
+    }
 
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    // Create order in Supabase
+    // Create order in Supabase or locally
     const newOrder = await createOrderInDatabase(user.id, cart, total);
 
     if (newOrder) {
-      setOrders(prev => [...prev, newOrder]);
+      // Update orders state
+      const updatedOrders = [...orders, newOrder];
+      setOrders(updatedOrders);
+
+      // Immediately persist to localStorage
+      localStorage.setItem('wl_orders', JSON.stringify(updatedOrders));
 
       // Decrease stock for purchased items
       setProducts(prev => prev.map(p => {
@@ -399,9 +406,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           }
           return p;
       }));
-    }
 
-    clearCart();
+      clearCart();
+      return newOrder;
+    } else {
+      throw new Error('Failed to create order');
+    }
   };
 
   return (
