@@ -17,19 +17,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-  },
-  global: {
-    fetch: (url: string, options: any) => {
-      return fetch(url, options).then(async (res) => {
-        // Clone the response to avoid body stream already read error
-        if (!res.ok) {
-          const clonedRes = res.clone();
-          const text = await clonedRes.text();
-          console.error(`Supabase API Error: ${res.status}`, text);
-        }
-        return res;
-      });
-    }
   }
 });
 
