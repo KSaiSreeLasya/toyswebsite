@@ -35,6 +35,14 @@ const AppContent: React.FC = () => {
         <Route path="/cart" element={<Cart />} />
         <Route path="/login" element={<Auth />} />
         <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfileDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin"
           element={
             <ProtectedRoute role={UserRole.ADMIN}>
