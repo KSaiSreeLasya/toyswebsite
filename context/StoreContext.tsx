@@ -111,32 +111,8 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           }
         }
 
-        // Initialize admin user (only once per session)
-        const adminSetupDone = sessionStorage.getItem('admin_setup_done');
-        if (!adminSetupDone) {
-          setTimeout(() => {
-            try {
-              const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 3000);
-
-              fetch(`${apiUrl}/api/setup-admin`, {
-                method: 'POST',
-                signal: controller.signal
-              }).then(response => {
-                clearTimeout(timeoutId);
-                if (response.ok) {
-                  sessionStorage.setItem('admin_setup_done', 'true');
-                }
-              }).catch(err => {
-                clearTimeout(timeoutId);
-                console.log('Admin setup attempt (non-critical):', err);
-              });
-            } catch (err) {
-              console.log('Admin setup attempt (non-critical):', err);
-            }
-          }, 500);
-        }
+        // Admin setup is handled during deployment via backend
+        // No need to fetch during app initialization
       } catch (err) {
         console.error('Data initialization error:', err);
       }
