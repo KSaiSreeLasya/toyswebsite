@@ -20,6 +20,7 @@ export interface UserAccount {
 export const signUp = async (email: string, password: string, role: 'CUSTOMER' | 'ADMIN'): Promise<{ success: boolean; error?: string; user?: UserAccount }> => {
   try {
     const emailLower = email.toLowerCase();
+    const roleLower = role.toLowerCase();
 
     // Check if user already exists in users table
     const { data: existingUser, error: checkError } = await supabase
@@ -51,7 +52,7 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       .insert({
         id: authData.user.id,
         email: emailLower,
-        role,
+        role: roleLower,
         name: emailLower.split('@')[0],
       })
       .select()
@@ -70,6 +71,7 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
 export const signIn = async (email: string, password: string, role: 'CUSTOMER' | 'ADMIN'): Promise<{ success: boolean; error?: string; user?: UserAccount }> => {
   try {
     const emailLower = email.toLowerCase();
+    const roleLower = role.toLowerCase();
 
     // Authenticate with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
@@ -86,7 +88,7 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
       .from('users')
       .select('*')
       .eq('id', authData.user.id)
-      .eq('role', role)
+      .eq('role', roleLower)
       .single();
 
     if (selectError || !user) {
