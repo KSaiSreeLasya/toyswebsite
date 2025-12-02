@@ -18,15 +18,20 @@ const Cart: React.FC = () => {
   const coinDiscount = useCoins ? coinsUsed : 0;
   const total = Math.max(0, subtotal + tax - coinDiscount);
 
-  const handlePayment = (e: React.FormEvent) => {
+  const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
-    // Simulate API call with a realistic delay for animation
-    setTimeout(() => {
-      placeOrder();
+    try {
+      await placeOrder();
+      // Simulate processing animation delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setIsProcessing(false);
       setOrderComplete(true);
-    }, 2500);
+    } catch (error) {
+      console.error('Payment error:', error);
+      setIsProcessing(false);
+      alert('Error placing order. Please try again.');
+    }
   };
 
   if (orderComplete) {
