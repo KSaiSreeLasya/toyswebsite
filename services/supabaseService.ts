@@ -84,7 +84,12 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
       password,
     });
 
-    if (authError || !authData.user) {
+    if (authError) {
+      console.error('Auth error details:', authError);
+      return { success: false, error: authError.message || 'Authentication failed.' };
+    }
+
+    if (!authData.user) {
       return { success: false, error: 'Invalid email or password.' };
     }
 
