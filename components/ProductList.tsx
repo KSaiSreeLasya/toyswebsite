@@ -91,7 +91,7 @@ const ProductList: React.FC = () => {
             <div className="mb-8">
               <h4 className="font-bold text-sm text-gray-400 mb-4 uppercase tracking-wide">Category</h4>
               <div className="space-y-2">
-                {allCategories.map(cat => (
+                {allCategories.slice(0, showAllCategories ? allCategories.length : 6).map(cat => (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
@@ -101,6 +101,14 @@ const ProductList: React.FC = () => {
                   </button>
                 ))}
               </div>
+              {allCategories.length > 6 && (
+                <button
+                  onClick={() => setShowAllCategories(!showAllCategories)}
+                  className="mt-3 text-sm font-bold text-primary-600 hover:text-primary-700 flex items-center gap-1 transition-colors"
+                >
+                  {showAllCategories ? '−view less' : '+view more'}
+                </button>
+              )}
             </div>
 
             <div>
