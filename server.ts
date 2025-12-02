@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { GoogleGenAI } from '@google/genai';
+import { createClient } from '@supabase/supabase-js';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -15,6 +16,11 @@ if (!apiKey) {
 }
 
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+const supabaseAdmin = supabaseServiceKey && supabaseUrl ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
 interface GenerateDescriptionRequest {
   productName: string;
@@ -94,8 +100,61 @@ app.post('/api/gift-recommendation', async (req: Request<{}, {}, GiftRecommendat
   }
 });
 
+app.post('/api/setup-admin', async (req: Request, res: Response) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(500).json({ error: 'Supabase admin client not configured.' });
+    }
+
+    const adminEmail = 'admin@gmail.com';
+    const adminPassword = 'admin2024';
+
+    // Check if admin user already exists
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+    const adminExists = existingUsers?.users.some(u => u.email === adminEmail);
+
+    if (adminExists) {
+      return res.json({ message: 'Admin user already exists.' });
+    }
+
+    // Create admin user via Auth
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: adminEmail,
+      password: adminPassword,
+      email_confirm: true,
+    });
+
+    if (authError || !authData.user) {
+      return res.status(400).json({ error: authError?.message || 'Failed to create admin user.' });
+    }
+
+    // Create admin profile in users table
+    const { error: dbError } = await supabaseAdmin
+      .from('users')
+      .insert({
+        id: authData.user.id,
+        email: adminEmail,
+        role: 'ADMIN',
+        name: 'Admin',
+      });
+
+    if (dbError) {
+      return res.status(400).json({ error: dbError.message });
+    }
+
+    res.json({
+      message: 'Admin user created successfully.',
+      email: adminEmail,
+      password: adminPassword
+    });
+  } catch (error) {
+    console.error('Setup Admin Error:', error);
+    res.status(500).json({ error: 'Failed to setup admin user.' });
+  }
+});
+
 app.get('/api/health', (req: Request, res: Response) => {
-  res.json({ 
+  res.json({
     status: 'ok',
     apiKeyConfigured: !!apiKey,
     message: apiKey ? 'API is ready' : 'API Key not configured - add GEMINI_API_KEY environment variable'
