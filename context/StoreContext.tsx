@@ -2,6 +2,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Product, CartItem, User, UserRole, Order, AdminPermission, PaymentConfig } from '../types';
 import { INITIAL_PRODUCTS } from '../constants';
 import { signUp, signIn, signOut } from '../services/supabaseService';
+import { syncProductsToDatabase, getProductsFromDatabase } from '../services/productService';
+import { addToCartDatabase, removeFromCartDatabase, updateCartQuantityDatabase, getCartFromDatabase, clearCartDatabase } from '../services/cartService';
+import { createOrderInDatabase, getOrdersFromDatabase } from '../services/orderService';
 
 interface StoreContextType {
   user: User | null;
@@ -61,35 +64,62 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     paypalClientId: ''
   });
 
-  // Persist data in localStorage (simple simulation)
+  // Persist data in localStorage and sync with Supabase
   useEffect(() => {
-    const storedUser = localStorage.getItem('wl_user');
-    const storedCart = localStorage.getItem('wl_cart');
-    const storedOrders = localStorage.getItem('wl_orders');
-    const storedProducts = localStorage.getItem('wl_products');
-    const storedShipping = localStorage.getItem('wl_shipping');
-    const storedReturns = localStorage.getItem('wl_returns');
-    const storedTeam = localStorage.getItem('wl_team');
-    const storedPayment = localStorage.getItem('wl_payment_config');
-    const storedAccounts = localStorage.getItem('wl_accounts');
+    const initializeData = async () => {
+      const storedUser = localStorage.getItem('wl_user');
+      const storedCart = localStorage.getItem('wl_cart');
+      const storedOrders = localStorage.getItem('wl_orders');
+      const storedProducts = localStorage.getItem('wl_products');
+      const storedShipping = localStorage.getItem('wl_shipping');
+      const storedReturns = localStorage.getItem('wl_returns');
+      const storedTeam = localStorage.getItem('wl_team');
+      const storedPayment = localStorage.getItem('wl_payment_config');
+      const storedAccounts = localStorage.getItem('wl_accounts');
 
-    if (storedUser) setUser(JSON.parse(storedUser));
-    if (storedCart) setCart(JSON.parse(storedCart));
-    if (storedOrders) setOrders(JSON.parse(storedOrders));
-    if (storedProducts) setProducts(JSON.parse(storedProducts));
-    if (storedShipping) setShippingPolicy(storedShipping);
-    if (storedReturns) setReturnsPolicy(storedReturns);
-    if (storedTeam) setTeamMembers(JSON.parse(storedTeam));
-    if (storedPayment) setPaymentConfig(JSON.parse(storedPayment));
-    if (storedAccounts) setUserAccounts(JSON.parse(storedAccounts));
+      if (storedUser) setUser(JSON.parse(storedUser));
+      if (storedCart) setCart(JSON.parse(storedCart));
+      if (storedOrders) setOrders(JSON.parse(storedOrders));
+      if (storedShipping) setShippingPolicy(storedShipping);
+      if (storedReturns) setReturnsPolicy(storedReturns);
+      if (storedTeam) setTeamMembers(JSON.parse(storedTeam));
+      if (storedPayment) setPaymentConfig(JSON.parse(storedPayment));
+      if (storedAccounts) setUserAccounts(JSON.parse(storedAccounts));
 
-    // Initialize admin user (only once per session)
-    const adminSetupDone = sessionStorage.getItem('admin_setup_done');
-    if (!adminSetupDone) {
-      fetch('http://localhost:5000/api/setup-admin', { method: 'POST' })
-        .then(() => sessionStorage.setItem('admin_setup_done', 'true'))
-        .catch(err => console.log('Admin setup attempt:', err));
-    }
+      // Load products from Supabase
+      try {
+        const dbProducts = await getProductsFromDatabase();
+        if (dbProducts.length > 0) {
+          setProducts(dbProducts);
+          localStorage.setItem('wl_products', JSON.stringify(dbProducts));
+        } else if (storedProducts) {
+          setProducts(JSON.parse(storedProducts));
+        } else {
+          // Sync initial products to database on first load
+          await syncProductsToDatabase(INITIAL_PRODUCTS);
+          setProducts(INITIAL_PRODUCTS);
+          localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
+        }
+      } catch (err) {
+        console.log('Error loading products from Supabase, using local:', err);
+        if (storedProducts) {
+          setProducts(JSON.parse(storedProducts));
+        } else {
+          setProducts(INITIAL_PRODUCTS);
+          localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
+        }
+      }
+
+      // Initialize admin user (only once per session)
+      const adminSetupDone = sessionStorage.getItem('admin_setup_done');
+      if (!adminSetupDone) {
+        fetch('http://localhost:5000/api/setup-admin', { method: 'POST' })
+          .then(() => sessionStorage.setItem('admin_setup_done', 'true'))
+          .catch(err => console.log('Admin setup attempt:', err));
+      }
+    };
+
+    initializeData();
   }, []);
 
   useEffect(() => {
@@ -182,6 +212,18 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       };
 
       setUser(newUser);
+
+      // Load user's cart from Supabase
+      try {
+        const dbCart = await getCartFromDatabase(newUser.id);
+        if (dbCart.length > 0) {
+          setCart(dbCart);
+          localStorage.setItem('wl_cart', JSON.stringify(dbCart));
+        }
+      } catch (err) {
+        console.log('Error loading cart from database:', err);
+      }
+
       return { success: true };
     } catch (err) {
       console.error('Login error:', err);
@@ -220,15 +262,36 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (product.stock <= 0) return; // Prevent adding out of stock
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
+      let newCart: CartItem[];
       if (existing) {
-        return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+        newCart = prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      } else {
+        newCart = [...prev, { ...product, quantity: 1 }];
       }
-      return [...prev, { ...product, quantity: 1 }];
+
+      // Sync to Supabase if user is logged in
+      if (user) {
+        const cartItem = newCart.find(item => item.id === product.id);
+        if (cartItem) {
+          addToCartDatabase(user.id, cartItem).catch(err => console.log('Error syncing to DB:', err));
+        }
+      }
+
+      return newCart;
     });
   };
 
   const removeFromCart = (productId: string) => {
-    setCart(prev => prev.filter(item => item.id !== productId));
+    setCart(prev => {
+      const newCart = prev.filter(item => item.id !== productId);
+
+      // Sync to Supabase if user is logged in
+      if (user) {
+        removeFromCartDatabase(user.id, productId).catch(err => console.log('Error syncing to DB:', err));
+      }
+
+      return newCart;
+    });
   };
 
   const updateCartQuantity = (productId: string, quantity: number) => {
@@ -236,10 +299,26 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       removeFromCart(productId);
       return;
     }
-    setCart(prev => prev.map(item => item.id === productId ? { ...item, quantity } : item));
+    setCart(prev => {
+      const newCart = prev.map(item => item.id === productId ? { ...item, quantity } : item);
+
+      // Sync to Supabase if user is logged in
+      if (user) {
+        updateCartQuantityDatabase(user.id, productId, quantity).catch(err => console.log('Error syncing to DB:', err));
+      }
+
+      return newCart;
+    });
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    setCart([]);
+
+    // Clear from Supabase if user is logged in
+    if (user) {
+      clearCartDatabase(user.id).catch(err => console.log('Error clearing cart from DB:', err));
+    }
+  };
 
   const addProduct = (product: Product) => {
     setProducts(prev => [...prev, product]);
@@ -278,26 +357,26 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setPaymentConfig(config);
   };
 
-  const placeOrder = () => {
+  const placeOrder = async () => {
     if (!user) return;
-    const newOrder: Order = {
-      id: `ORD-${Date.now()}`,
-      userId: user.id,
-      items: [...cart],
-      total: cart.reduce((sum, item) => sum + (item.price * item.quantity), 0),
-      date: new Date().toISOString(),
-      status: 'pending'
-    };
-    setOrders(prev => [...prev, newOrder]);
-    
-    // Decrease stock for purchased items
-    setProducts(prev => prev.map(p => {
-        const cartItem = cart.find(c => c.id === p.id);
-        if (cartItem) {
-            return { ...p, stock: Math.max(0, p.stock - cartItem.quantity) };
-        }
-        return p;
-    }));
+
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
+    // Create order in Supabase
+    const newOrder = await createOrderInDatabase(user.id, cart, total);
+
+    if (newOrder) {
+      setOrders(prev => [...prev, newOrder]);
+
+      // Decrease stock for purchased items
+      setProducts(prev => prev.map(p => {
+          const cartItem = cart.find(c => c.id === p.id);
+          if (cartItem) {
+              return { ...p, stock: Math.max(0, p.stock - cartItem.quantity) };
+          }
+          return p;
+      }));
+    }
 
     clearCart();
   };
