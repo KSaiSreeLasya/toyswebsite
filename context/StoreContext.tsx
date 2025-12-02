@@ -67,56 +67,68 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // Persist data in localStorage and sync with Supabase
   useEffect(() => {
     const initializeData = async () => {
-      const storedUser = localStorage.getItem('wl_user');
-      const storedCart = localStorage.getItem('wl_cart');
-      const storedOrders = localStorage.getItem('wl_orders');
-      const storedProducts = localStorage.getItem('wl_products');
-      const storedShipping = localStorage.getItem('wl_shipping');
-      const storedReturns = localStorage.getItem('wl_returns');
-      const storedTeam = localStorage.getItem('wl_team');
-      const storedPayment = localStorage.getItem('wl_payment_config');
-      const storedAccounts = localStorage.getItem('wl_accounts');
-
-      if (storedUser) setUser(JSON.parse(storedUser));
-      if (storedCart) setCart(JSON.parse(storedCart));
-      if (storedOrders) setOrders(JSON.parse(storedOrders));
-      if (storedShipping) setShippingPolicy(storedShipping);
-      if (storedReturns) setReturnsPolicy(storedReturns);
-      if (storedTeam) setTeamMembers(JSON.parse(storedTeam));
-      if (storedPayment) setPaymentConfig(JSON.parse(storedPayment));
-      if (storedAccounts) setUserAccounts(JSON.parse(storedAccounts));
-
-      // Load products from Supabase
       try {
-        const dbProducts = await getProductsFromDatabase();
-        if (dbProducts.length > 0) {
-          setProducts(dbProducts);
-          localStorage.setItem('wl_products', JSON.stringify(dbProducts));
-        } else if (storedProducts) {
-          setProducts(JSON.parse(storedProducts));
-        } else {
-          // Sync initial products to database on first load
-          await syncProductsToDatabase(INITIAL_PRODUCTS);
-          setProducts(INITIAL_PRODUCTS);
-          localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
+        const storedUser = localStorage.getItem('wl_user');
+        const storedCart = localStorage.getItem('wl_cart');
+        const storedOrders = localStorage.getItem('wl_orders');
+        const storedProducts = localStorage.getItem('wl_products');
+        const storedShipping = localStorage.getItem('wl_shipping');
+        const storedReturns = localStorage.getItem('wl_returns');
+        const storedTeam = localStorage.getItem('wl_team');
+        const storedPayment = localStorage.getItem('wl_payment_config');
+        const storedAccounts = localStorage.getItem('wl_accounts');
+
+        if (storedUser) setUser(JSON.parse(storedUser));
+        if (storedCart) setCart(JSON.parse(storedCart));
+        if (storedOrders) setOrders(JSON.parse(storedOrders));
+        if (storedShipping) setShippingPolicy(storedShipping);
+        if (storedReturns) setReturnsPolicy(storedReturns);
+        if (storedTeam) setTeamMembers(JSON.parse(storedTeam));
+        if (storedPayment) setPaymentConfig(JSON.parse(storedPayment));
+        if (storedAccounts) setUserAccounts(JSON.parse(storedAccounts));
+
+        // Load products from Supabase
+        try {
+          const dbProducts = await getProductsFromDatabase();
+          if (dbProducts.length > 0) {
+            setProducts(dbProducts);
+            localStorage.setItem('wl_products', JSON.stringify(dbProducts));
+          } else if (storedProducts) {
+            setProducts(JSON.parse(storedProducts));
+          } else {
+            // Sync initial products to database on first load
+            await syncProductsToDatabase(INITIAL_PRODUCTS);
+            setProducts(INITIAL_PRODUCTS);
+            localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
+          }
+        } catch (err) {
+          console.log('Error loading products from Supabase, using local:', err);
+          if (storedProducts) {
+            setProducts(JSON.parse(storedProducts));
+          } else {
+            setProducts(INITIAL_PRODUCTS);
+            localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
+          }
+        }
+
+        // Initialize admin user (only once per session)
+        const adminSetupDone = sessionStorage.getItem('admin_setup_done');
+        if (!adminSetupDone) {
+          try {
+            const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+            const response = await fetch(`${apiUrl}/api/setup-admin`, {
+              method: 'POST',
+              timeout: 5000
+            });
+            if (response.ok) {
+              sessionStorage.setItem('admin_setup_done', 'true');
+            }
+          } catch (err) {
+            console.log('Admin setup attempt (non-critical):', err);
+          }
         }
       } catch (err) {
-        console.log('Error loading products from Supabase, using local:', err);
-        if (storedProducts) {
-          setProducts(JSON.parse(storedProducts));
-        } else {
-          setProducts(INITIAL_PRODUCTS);
-          localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
-        }
-      }
-
-      // Initialize admin user (only once per session)
-      const adminSetupDone = sessionStorage.getItem('admin_setup_done');
-      if (!adminSetupDone) {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-        fetch(`${apiUrl}/api/setup-admin`, { method: 'POST' })
-          .then(() => sessionStorage.setItem('admin_setup_done', 'true'))
-          .catch(err => console.log('Admin setup attempt (non-critical):', err));
+        console.error('Data initialization error:', err);
       }
     };
 
