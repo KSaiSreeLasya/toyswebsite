@@ -101,53 +101,92 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     const emailLower = email.toLowerCase();
     const roleLower = role.toLowerCase();
 
+    console.log('Attempting sign in for:', emailLower, 'with role:', roleLower);
+
     // Authenticate with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: emailLower,
-      password,
-    });
+    let authData: any = null;
+    let authError: any = null;
+
+    try {
+      const response = await supabase.auth.signInWithPassword({
+        email: emailLower,
+        password,
+      });
+      authData = response.data;
+      authError = response.error;
+    } catch (e: any) {
+      console.error('Auth exception:', e);
+      // If it's a body stream error, try to extract useful info
+      if (e.message?.includes('body stream')) {
+        return { success: false, error: 'Authentication service temporarily unavailable. Please try again.' };
+      }
+      return { success: false, error: e.message || 'Authentication failed.' };
+    }
 
     if (authError) {
       console.error('Auth error details:', authError);
       return { success: false, error: authError.message || 'Authentication failed.' };
     }
 
-    if (!authData.user) {
+    if (!authData?.user) {
       return { success: false, error: 'Invalid email or password.' };
     }
 
+    console.log('Auth successful, user ID:', authData.user.id);
+
     // Get user record from users table
-    let { data: user, error: selectError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', authData.user.id)
-      .eq('role', roleLower)
-      .single();
+    let user: any = null;
+    let selectError: any = null;
+
+    try {
+      const response = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', authData.user.id)
+        .eq('role', roleLower)
+        .single();
+
+      user = response.data;
+      selectError = response.error;
+    } catch (e) {
+      console.error('User select error:', e);
+      selectError = e;
+    }
 
     // If user record doesn't exist, create it
     if ((selectError || !user) && authData.user.id) {
-      const { data: newUser, error: insertError } = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email: emailLower,
-          role: roleLower,
-          name: emailLower.split('@')[0],
-        })
-        .select()
-        .single();
+      console.log('Creating user record for:', emailLower);
+      try {
+        const response = await supabase
+          .from('users')
+          .insert({
+            id: authData.user.id,
+            email: emailLower,
+            role: roleLower,
+            name: emailLower.split('@')[0],
+          })
+          .select()
+          .single();
 
-      if (insertError) {
-        return { success: false, error: `User record creation failed: ${insertError.message}` };
+        if (response.error) {
+          console.error('Insert error:', response.error);
+          return { success: false, error: `User record creation failed: ${response.error.message}` };
+        }
+
+        user = response.data;
+      } catch (insertErr) {
+        console.error('Insert exception:', insertErr);
+        return { success: false, error: 'Failed to create user record.' };
       }
-
-      user = newUser;
-    } else if (selectError) {
-      return { success: false, error: 'User not found.' };
+    } else if (selectError && user === null) {
+      console.error('User select error and no user:', selectError);
+      return { success: false, error: 'User not found or role mismatch.' };
     }
 
+    console.log('Sign in successful');
     return { success: true, user };
   } catch (err) {
+    console.error('Unexpected sign in error:', err);
     return { success: false, error: 'Login failed. Please try again.' };
   }
 };
