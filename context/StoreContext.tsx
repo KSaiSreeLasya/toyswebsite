@@ -309,6 +309,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     await signOut();
     setUser(null);
     setCart([]);
+    setOrders([]);
   };
 
   const addToCart = (product: Product) => {
