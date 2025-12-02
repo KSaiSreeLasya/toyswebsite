@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { UserRole } from '../types';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, Shield, ArrowLeft, CheckCircle } from 'lucide-react';
+import { Lock, Mail, Shield, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 const Auth: React.FC = () => {
@@ -19,6 +19,8 @@ const Auth: React.FC = () => {
   // UI State
   const [error, setError] = useState('');
   const [resetSent, setResetSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -212,17 +214,24 @@ const Auth: React.FC = () => {
                 />
               </div>
               <div className="relative">
-                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <Lock size={18} className="text-gray-400" />
                 </div>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
-                  className="appearance-none rounded-xl relative block w-full pl-10 px-3 py-3 border-2 border-gray-200 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-400 sm:text-sm transition-all"
+                  className="appearance-none rounded-xl relative block w-full pl-10 pr-10 py-3 border-2 border-gray-200 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-400 sm:text-sm transition-all"
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
 
               {view === 'signup' && (
@@ -231,13 +240,20 @@ const Auth: React.FC = () => {
                     <Lock size={18} className="text-gray-400" />
                     </div>
                     <input
-                    type="password"
+                    type={showConfirmPassword ? "text" : "password"}
                     required
-                    className="appearance-none rounded-xl relative block w-full pl-10 px-3 py-3 border-2 border-gray-200 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-400 sm:text-sm transition-all"
+                    className="appearance-none rounded-xl relative block w-full pl-10 pr-10 py-3 border-2 border-gray-200 placeholder-gray-400 text-gray-900 focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-400 sm:text-sm transition-all"
                     placeholder="Confirm Password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
                 </div>
               )}
             </div>
