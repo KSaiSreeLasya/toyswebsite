@@ -122,9 +122,75 @@ const Cart: React.FC = () => {
               <span>Shipping</span>
               <span className="text-green-600 font-bold">Free</span>
             </div>
+
+            {/* Coin Usage Section */}
+            <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-3 mt-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={useCoins}
+                  onChange={(e) => {
+                    setUseCoins(e.target.checked);
+                    if (e.target.checked) {
+                      setCoinsUsed(Math.min(availableCoins, Math.floor(subtotal + tax)));
+                    } else {
+                      setCoinsUsed(0);
+                    }
+                  }}
+                  className="w-5 h-5 accent-yellow-600 cursor-pointer"
+                />
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-gray-800">Use {coinsUsed > 0 ? coinsUsed : availableCoins} Coins</span>
+                    <span className="text-lg">🎁</span>
+                  </div>
+                  <p className="text-xs text-gray-600">Available balance: {availableCoins}</p>
+                </div>
+              </label>
+
+              {useCoins && (
+                <div className="mt-3 pt-3 border-t border-yellow-200">
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="text-xs font-bold text-gray-700">Coins to use:</label>
+                    <div className="flex items-center gap-1 bg-white rounded-lg border border-yellow-300 flex-1">
+                      <button
+                        onClick={() => setCoinsUsed(Math.max(0, coinsUsed - 1))}
+                        className="px-2 py-1 text-gray-600 hover:bg-yellow-100 transition-colors"
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        value={coinsUsed}
+                        onChange={(e) => {
+                          const val = Math.min(availableCoins, Math.max(0, parseInt(e.target.value) || 0));
+                          setCoinsUsed(Math.min(val, Math.floor(subtotal + tax)));
+                        }}
+                        max={Math.min(availableCoins, Math.floor(subtotal + tax))}
+                        min="0"
+                        className="flex-1 text-center text-sm font-bold bg-transparent border-none outline-none text-gray-800"
+                      />
+                      <button
+                        onClick={() => setCoinsUsed(Math.min(availableCoins, coinsUsed + 1, Math.floor(subtotal + tax)))}
+                        className="px-2 py-1 text-gray-600 hover:bg-yellow-100 transition-colors"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-600">Discount: ₹{coinDiscount.toFixed(2)}</p>
+                </div>
+              )}
+            </div>
+
             <div className="border-t-2 border-dashed border-gray-200 pt-3 flex justify-between font-black text-xl text-gray-800">
               <span>Total</span>
-              <span>₹{total.toFixed(2)}</span>
+              <div className="text-right">
+                {coinDiscount > 0 && (
+                  <div className="text-sm font-medium text-green-600 line-through text-gray-400">₹{(subtotal + tax).toFixed(2)}</div>
+                )}
+                <span className={coinDiscount > 0 ? 'text-green-600' : ''}>₹{total.toFixed(2)}</span>
+              </div>
             </div>
           </div>
 
