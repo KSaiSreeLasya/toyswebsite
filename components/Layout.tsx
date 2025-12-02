@@ -86,12 +86,15 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
               {user ? (
                 <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2 bg-primary-50 px-4 py-2 rounded-full border border-primary-100">
+                  <Link
+                    to="/profile"
+                    className="flex items-center gap-2 bg-primary-50 px-4 py-2 rounded-full border border-primary-100 hover:border-primary-300 hover:bg-primary-100 transition-colors"
+                  >
                     <User size={20} className="text-primary-400" />
                     <span className="text-sm font-bold text-primary-800">{user.name}</span>
-                  </div>
-                  <button 
-                    onClick={logout} 
+                  </Link>
+                  <button
+                    onClick={logout}
                     className="text-gray-400 hover:text-red-500 transition-colors hover:scale-110 transform"
                     title="Logout"
                   >
@@ -133,6 +136,9 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 Cart
                 <span className="bg-accent-500 text-white text-xs rounded-full px-2 py-0.5">{cartCount}</span>
               </Link>
+              {user && (
+                <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="block text-primary-600 font-bold p-2 hover:bg-primary-50 rounded-lg">My Profile</Link>
+              )}
               {user?.role === UserRole.ADMIN && (
                 <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="block text-secondary-600 font-bold p-2 hover:bg-secondary-50 rounded-lg">Admin Dashboard</Link>
               )}

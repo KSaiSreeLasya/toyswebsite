@@ -1,8 +1,13 @@
-import { supabase } from './supabaseService';
+import { supabase, isSupabaseEnabled } from './supabaseService';
 import { Product } from '../types';
 
 export const syncProductsToDatabase = async (products: Product[]): Promise<boolean> => {
   try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, skipping product sync');
+      return true;
+    }
+
     for (const product of products) {
       const { error } = await supabase
         .from('products')
@@ -31,6 +36,11 @@ export const syncProductsToDatabase = async (products: Product[]): Promise<boole
 
 export const getProductsFromDatabase = async (): Promise<Product[]> => {
   try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, returning empty products list');
+      return [];
+    }
+
     const { data, error } = await supabase
       .from('products')
       .select('*')
@@ -59,6 +69,11 @@ export const getProductsFromDatabase = async (): Promise<Product[]> => {
 
 export const updateProductStock = async (productId: string, newStock: number): Promise<boolean> => {
   try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, skipping stock update');
+      return true;
+    }
+
     const { error } = await supabase
       .from('products')
       .update({ stock: newStock })

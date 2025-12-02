@@ -67,55 +67,54 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // Persist data in localStorage and sync with Supabase
   useEffect(() => {
     const initializeData = async () => {
-      const storedUser = localStorage.getItem('wl_user');
-      const storedCart = localStorage.getItem('wl_cart');
-      const storedOrders = localStorage.getItem('wl_orders');
-      const storedProducts = localStorage.getItem('wl_products');
-      const storedShipping = localStorage.getItem('wl_shipping');
-      const storedReturns = localStorage.getItem('wl_returns');
-      const storedTeam = localStorage.getItem('wl_team');
-      const storedPayment = localStorage.getItem('wl_payment_config');
-      const storedAccounts = localStorage.getItem('wl_accounts');
-
-      if (storedUser) setUser(JSON.parse(storedUser));
-      if (storedCart) setCart(JSON.parse(storedCart));
-      if (storedOrders) setOrders(JSON.parse(storedOrders));
-      if (storedShipping) setShippingPolicy(storedShipping);
-      if (storedReturns) setReturnsPolicy(storedReturns);
-      if (storedTeam) setTeamMembers(JSON.parse(storedTeam));
-      if (storedPayment) setPaymentConfig(JSON.parse(storedPayment));
-      if (storedAccounts) setUserAccounts(JSON.parse(storedAccounts));
-
-      // Load products from Supabase
       try {
-        const dbProducts = await getProductsFromDatabase();
-        if (dbProducts.length > 0) {
-          setProducts(dbProducts);
-          localStorage.setItem('wl_products', JSON.stringify(dbProducts));
-        } else if (storedProducts) {
-          setProducts(JSON.parse(storedProducts));
-        } else {
-          // Sync initial products to database on first load
-          await syncProductsToDatabase(INITIAL_PRODUCTS);
-          setProducts(INITIAL_PRODUCTS);
-          localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
-        }
-      } catch (err) {
-        console.log('Error loading products from Supabase, using local:', err);
-        if (storedProducts) {
-          setProducts(JSON.parse(storedProducts));
-        } else {
-          setProducts(INITIAL_PRODUCTS);
-          localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
-        }
-      }
+        const storedUser = localStorage.getItem('wl_user');
+        const storedCart = localStorage.getItem('wl_cart');
+        const storedOrders = localStorage.getItem('wl_orders');
+        const storedProducts = localStorage.getItem('wl_products');
+        const storedShipping = localStorage.getItem('wl_shipping');
+        const storedReturns = localStorage.getItem('wl_returns');
+        const storedTeam = localStorage.getItem('wl_team');
+        const storedPayment = localStorage.getItem('wl_payment_config');
+        const storedAccounts = localStorage.getItem('wl_accounts');
 
-      // Initialize admin user (only once per session)
-      const adminSetupDone = sessionStorage.getItem('admin_setup_done');
-      if (!adminSetupDone) {
-        fetch('http://localhost:5000/api/setup-admin', { method: 'POST' })
-          .then(() => sessionStorage.setItem('admin_setup_done', 'true'))
-          .catch(err => console.log('Admin setup attempt:', err));
+        if (storedUser) setUser(JSON.parse(storedUser));
+        if (storedCart) setCart(JSON.parse(storedCart));
+        if (storedOrders) setOrders(JSON.parse(storedOrders));
+        if (storedShipping) setShippingPolicy(storedShipping);
+        if (storedReturns) setReturnsPolicy(storedReturns);
+        if (storedTeam) setTeamMembers(JSON.parse(storedTeam));
+        if (storedPayment) setPaymentConfig(JSON.parse(storedPayment));
+        if (storedAccounts) setUserAccounts(JSON.parse(storedAccounts));
+
+        // Load products from Supabase
+        try {
+          const dbProducts = await getProductsFromDatabase();
+          if (dbProducts.length > 0) {
+            setProducts(dbProducts);
+            localStorage.setItem('wl_products', JSON.stringify(dbProducts));
+          } else if (storedProducts) {
+            setProducts(JSON.parse(storedProducts));
+          } else {
+            // Sync initial products to database on first load
+            await syncProductsToDatabase(INITIAL_PRODUCTS);
+            setProducts(INITIAL_PRODUCTS);
+            localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
+          }
+        } catch (err) {
+          console.log('Error loading products from Supabase, using local:', err);
+          if (storedProducts) {
+            setProducts(JSON.parse(storedProducts));
+          } else {
+            setProducts(INITIAL_PRODUCTS);
+            localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
+          }
+        }
+
+        // Admin setup is handled during deployment via backend
+        // No need to fetch during app initialization
+      } catch (err) {
+        console.error('Data initialization error:', err);
       }
     };
 
@@ -127,8 +126,15 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [cart]);
 
   useEffect(() => {
-    localStorage.setItem('wl_orders', JSON.stringify(orders));
-  }, [orders]);
+    if (user) {
+      // Save user-specific orders
+      const userOrdersKey = `wl_orders_${user.id}`;
+      localStorage.setItem(userOrdersKey, JSON.stringify(orders));
+    } else {
+      // If no user is logged in, save to global key (for anonymous browsing)
+      localStorage.setItem('wl_orders', JSON.stringify(orders));
+    }
+  }, [orders, user]);
 
   useEffect(() => {
     localStorage.setItem('wl_products', JSON.stringify(products));
@@ -224,6 +230,29 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.log('Error loading cart from database:', err);
       }
 
+      // Load user's orders from localStorage (user-specific)
+      try {
+        const userOrdersKey = `wl_orders_${newUser.id}`;
+        const storedUserOrders = localStorage.getItem(userOrdersKey);
+        if (storedUserOrders) {
+          const userOrders = JSON.parse(storedUserOrders);
+          setOrders(userOrders);
+        } else {
+          // Check if orders exist in old global key and migrate them if they belong to this user
+          const globalOrdersStr = localStorage.getItem('wl_orders');
+          if (globalOrdersStr) {
+            const globalOrders = JSON.parse(globalOrdersStr);
+            const userSpecificOrders = globalOrders.filter((order: Order) => order.userId === newUser.id);
+            if (userSpecificOrders.length > 0) {
+              setOrders(userSpecificOrders);
+              localStorage.setItem(userOrdersKey, JSON.stringify(userSpecificOrders));
+            }
+          }
+        }
+      } catch (err) {
+        console.log('Error loading user orders:', err);
+      }
+
       return { success: true };
     } catch (err) {
       console.error('Login error:', err);
@@ -256,6 +285,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     await signOut();
     setUser(null);
     setCart([]);
+    setOrders([]);
   };
 
   const addToCart = (product: Product) => {
@@ -358,15 +388,23 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const placeOrder = async () => {
-    if (!user) return;
+    if (!user) {
+      throw new Error('User not logged in');
+    }
 
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
-    // Create order in Supabase
+    // Create order in Supabase or locally
     const newOrder = await createOrderInDatabase(user.id, cart, total);
 
     if (newOrder) {
-      setOrders(prev => [...prev, newOrder]);
+      // Update orders state
+      const updatedOrders = [...orders, newOrder];
+      setOrders(updatedOrders);
+
+      // Immediately persist to user-specific localStorage
+      const userOrdersKey = `wl_orders_${user.id}`;
+      localStorage.setItem(userOrdersKey, JSON.stringify(updatedOrders));
 
       // Decrease stock for purchased items
       setProducts(prev => prev.map(p => {
@@ -376,9 +414,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           }
           return p;
       }));
-    }
 
-    clearCart();
+      clearCart();
+      return newOrder;
+    } else {
+      throw new Error('Failed to create order');
+    }
   };
 
   return (

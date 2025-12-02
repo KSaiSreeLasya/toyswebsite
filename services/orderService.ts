@@ -1,9 +1,22 @@
-import { supabase } from './supabaseService';
+import { supabase, isSupabaseEnabled } from './supabaseService';
 import { CartItem, Order } from '../types';
 
 export const createOrderInDatabase = async (userId: string, items: CartItem[], total: number): Promise<Order | null> => {
   try {
     const orderId = `ORD-${Date.now()}`;
+
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, creating local order only');
+      const order: Order = {
+        id: orderId,
+        userId,
+        items,
+        total,
+        date: new Date().toISOString(),
+        status: 'pending'
+      };
+      return order;
+    }
 
     const { error: orderError } = await supabase
       .from('orders')
@@ -53,6 +66,11 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
 
 export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> => {
   try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, returning empty orders list');
+      return [];
+    }
+
     const { data, error } = await supabase
       .from('orders')
       .select(`
@@ -84,7 +102,6 @@ export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> =>
         name: item.product_name,
         quantity: item.quantity,
         price: item.unit_price,
-        // These fields won't be fully populated from order history
         description: '',
         category: '',
         imageUrl: '',
@@ -103,6 +120,11 @@ export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> =>
 
 export const updateOrderStatus = async (orderId: string, status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'): Promise<boolean> => {
   try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, skipping order status update');
+      return true;
+    }
+
     const { error } = await supabase
       .from('orders')
       .update({ status })
