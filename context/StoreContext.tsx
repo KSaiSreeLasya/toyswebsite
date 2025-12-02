@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Product, CartItem, User, UserRole, Order, AdminPermission, PaymentConfig } from '../types';
 import { INITIAL_PRODUCTS } from '../constants';
-import { signUp, signIn } from '../services/supabaseService';
+import { signUp, signIn, signOut } from '../services/supabaseService';
 
 interface StoreContextType {
   user: User | null;
@@ -197,9 +197,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return login(email, password, role);
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await signOut();
     setUser(null);
-    setCart([]); 
+    setCart([]);
   };
 
   const addToCart = (product: Product) => {
