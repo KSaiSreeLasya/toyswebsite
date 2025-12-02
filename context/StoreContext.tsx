@@ -12,9 +12,9 @@ interface StoreContextType {
   shippingPolicy: string;
   returnsPolicy: string;
   paymentConfig: PaymentConfig;
-  login: (email: string, password: string, role: UserRole) => { success: boolean; error?: string };
-  signup: (email: string, password: string, role: UserRole) => { success: boolean; error?: string };
-  logout: () => void;
+  login: (email: string, password: string, role: UserRole) => Promise<{ success: boolean; error?: string }>;
+  signup: (email: string, password: string, role: UserRole) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
   updateCartQuantity: (productId: string, quantity: number) => void;

@@ -36,25 +36,13 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     console.log('Attempting signup for:', emailLower);
 
     // Check if user already exists in users table
-    let existingUser: any = null;
-    let checkError: any = null;
-
-    try {
-      const response = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', emailLower);
-
-      existingUser = response.data;
-      checkError = response.error;
-    } catch (e) {
-      console.error('Check user exception:', e);
-      checkError = e;
-    }
+    const { data: existingUser, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', emailLower);
 
     if (checkError) {
       console.error('Check user error:', checkError);
-      return { success: false, error: checkError.message || 'Failed to check existing user.' };
     }
 
     if (existingUser && existingUser.length > 0) {
@@ -62,22 +50,10 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     }
 
     // Create auth user
-    let authData: any;
-    let authError: any;
-    try {
-      const response = await supabase.auth.signUp({
-        email: emailLower,
-        password,
-      });
-      authData = response.data;
-      authError = response.error;
-    } catch (e: any) {
-      console.error('Signup auth exception:', e);
-      if (e.message?.includes('body stream')) {
-        return { success: false, error: 'Authentication service temporarily unavailable.' };
-      }
-      return { success: false, error: 'Failed to create account. Please try again.' };
-    }
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: emailLower,
+      password,
+    });
 
     if (authError) {
       console.error('Signup auth error:', authError);
@@ -91,26 +67,16 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     console.log('Auth signup successful, creating user profile');
 
     // Insert user record in users table
-    let newUser: any;
-    let insertError: any;
-    try {
-      const response = await supabase
-        .from('users')
-        .insert({
-          id: authData.user.id,
-          email: emailLower,
-          role: roleLower,
-          name: emailLower.split('@')[0],
-        })
-        .select()
-        .single();
-
-      newUser = response.data;
-      insertError = response.error;
-    } catch (e) {
-      console.error('Insert exception:', e);
-      insertError = e;
-    }
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
+      .insert({
+        id: authData.user.id,
+        email: emailLower,
+        role: roleLower,
+        name: emailLower.split('@')[0],
+      })
+      .select()
+      .single();
 
     if (insertError) {
       console.error('Insert user error:', insertError);
@@ -133,24 +99,10 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     console.log('Attempting sign in for:', emailLower, 'with role:', roleLower);
 
     // Authenticate with Supabase Auth
-    let authData: any = null;
-    let authError: any = null;
-
-    try {
-      const response = await supabase.auth.signInWithPassword({
-        email: emailLower,
-        password,
-      });
-      authData = response.data;
-      authError = response.error;
-    } catch (e: any) {
-      console.error('Auth exception:', e);
-      // If it's a body stream error, try to extract useful info
-      if (e.message?.includes('body stream')) {
-        return { success: false, error: 'Authentication service temporarily unavailable. Please try again.' };
-      }
-      return { success: false, error: e.message || 'Authentication failed.' };
-    }
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      email: emailLower,
+      password,
+    });
 
     if (authError) {
       console.error('Auth error details:', authError);
@@ -164,52 +116,38 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     console.log('Auth successful, user ID:', authData.user.id);
 
     // Get user record from users table
-    let user: any = null;
-    let selectError: any = null;
-
-    try {
-      const response = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .eq('role', roleLower)
-        .single();
-
-      user = response.data;
-      selectError = response.error;
-    } catch (e) {
-      console.error('User select error:', e);
-      selectError = e;
-    }
+    const { data: user, error: selectError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single();
 
     // If user record doesn't exist, create it
-    if ((selectError || !user) && authData.user.id) {
+    if (selectError && !user) {
       console.log('Creating user record for:', emailLower);
-      try {
-        const response = await supabase
-          .from('users')
-          .insert({
-            id: authData.user.id,
-            email: emailLower,
-            role: roleLower,
-            name: emailLower.split('@')[0],
-          })
-          .select()
-          .single();
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: authData.user.id,
+          email: emailLower,
+          role: roleLower,
+          name: emailLower.split('@')[0],
+        })
+        .select()
+        .single();
 
-        if (response.error) {
-          console.error('Insert error:', response.error);
-          return { success: false, error: `User record creation failed: ${response.error.message}` };
-        }
-
-        user = response.data;
-      } catch (insertErr) {
-        console.error('Insert exception:', insertErr);
+      if (insertError) {
+        console.error('Insert error:', insertError);
         return { success: false, error: 'Failed to create user record.' };
       }
-    } else if (selectError && user === null) {
-      console.error('User select error and no user:', selectError);
-      return { success: false, error: 'User not found or role mismatch.' };
+
+      console.log('Sign in successful');
+      return { success: true, user: newUser };
+    }
+
+    if (selectError && user === null) {
+      console.error('User select error:', selectError);
+      return { success: false, error: 'User not found.' };
     }
 
     console.log('Sign in successful');
