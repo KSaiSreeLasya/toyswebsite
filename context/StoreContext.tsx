@@ -134,54 +134,59 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [user]);
 
   const login = async (email: string, password: string, role: UserRole) => {
-    // Validate inputs
-    if (!email || !password) {
-      return { success: false, error: 'Email and password are required.' };
-    }
-
-    // Sign in with Supabase
-    const result = await signIn(email, password, role);
-
-    if (!result.success) {
-      return { success: false, error: result.error || 'Invalid credentials. Please try again.' };
-    }
-
-    // Check if user exists in team members (for Admin role)
-    const existingTeamMember = role === UserRole.ADMIN
-      ? teamMembers.find(m => m.email.toLowerCase() === email.toLowerCase())
-      : null;
-
-    let permissions: AdminPermission[] = [];
-
-    if (role === UserRole.ADMIN) {
-      if (existingTeamMember) {
-        permissions = existingTeamMember.permissions || [];
-      } else {
-        permissions = ['DASHBOARD', 'PRODUCTS', 'POLICIES', 'TEAM'];
+    try {
+      // Validate inputs
+      if (!email || !password) {
+        return { success: false, error: 'Email and password are required.' };
       }
-    }
 
-    // Try to recover a customer's previous session
-    const storedUserStr = localStorage.getItem('wl_user');
-    let previousWishlist: string[] = [];
-    if (storedUserStr) {
-        const stored = JSON.parse(storedUserStr);
-        if (stored.email === email) {
-            previousWishlist = stored.wishlist || [];
+      // Sign in with Supabase
+      const result = await signIn(email, password, role);
+
+      if (!result.success) {
+        return { success: false, error: result.error || 'Invalid credentials. Please try again.' };
+      }
+
+      // Check if user exists in team members (for Admin role)
+      const existingTeamMember = role === UserRole.ADMIN
+        ? teamMembers.find(m => m.email.toLowerCase() === email.toLowerCase())
+        : null;
+
+      let permissions: AdminPermission[] = [];
+
+      if (role === UserRole.ADMIN) {
+        if (existingTeamMember) {
+          permissions = existingTeamMember.permissions || [];
+        } else {
+          permissions = ['DASHBOARD', 'PRODUCTS', 'POLICIES', 'TEAM'];
         }
+      }
+
+      // Try to recover a customer's previous session
+      const storedUserStr = localStorage.getItem('wl_user');
+      let previousWishlist: string[] = [];
+      if (storedUserStr) {
+          const stored = JSON.parse(storedUserStr);
+          if (stored.email === email) {
+              previousWishlist = stored.wishlist || [];
+          }
+      }
+
+      const newUser: User = existingTeamMember || {
+        id: result.user?.id || Date.now().toString(),
+        name: result.user?.name || email.split('@')[0],
+        email,
+        role,
+        permissions,
+        wishlist: previousWishlist
+      };
+
+      setUser(newUser);
+      return { success: true };
+    } catch (err) {
+      console.error('Login error:', err);
+      return { success: false, error: 'An unexpected error occurred during login.' };
     }
-
-    const newUser: User = existingTeamMember || {
-      id: result.user?.id || Date.now().toString(),
-      name: result.user?.name || email.split('@')[0],
-      email,
-      role,
-      permissions,
-      wishlist: previousWishlist
-    };
-
-    setUser(newUser);
-    return { success: true };
   };
 
   const signup = async (email: string, password: string, role: UserRole) => {
