@@ -256,10 +256,10 @@ const Cart: React.FC = () => {
                 >
                   Back
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={isProcessing}
-                  className="flex-1 bg-green-500 text-white font-bold py-2 rounded-xl hover:bg-green-600 transition-all disabled:opacity-80 disabled:cursor-wait btn-funky border-green-700 flex justify-center items-center"
+                  className="flex-1 bg-green-500 text-white font-bold py-2 rounded-xl hover:bg-green-600 transition-all disabled:opacity-80 disabled:cursor-wait btn-funky border-green-700 flex justify-center items-center flex-col"
                 >
                   {isProcessing ? (
                     <div className="flex items-center gap-2">
@@ -267,7 +267,10 @@ const Cart: React.FC = () => {
                       <span>Processing...</span>
                     </div>
                   ) : (
-                    `Pay ₹${total.toFixed(2)}`
+                    <>
+                      <span>Pay ₹{total.toFixed(2)}</span>
+                      {coinDiscount > 0 && <span className="text-xs text-green-100">You saved ₹{coinDiscount.toFixed(2)} with coins!</span>}
+                    </>
                   )}
                 </button>
               </div>
