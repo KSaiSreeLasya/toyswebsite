@@ -29,6 +29,11 @@ export const addToCartDatabase = async (userId: string, product: CartItem): Prom
 
 export const removeFromCartDatabase = async (userId: string, productId: string): Promise<boolean> => {
   try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, skipping cart sync');
+      return true;
+    }
+
     const { error } = await supabase
       .from('cart_items')
       .delete()
@@ -48,6 +53,11 @@ export const removeFromCartDatabase = async (userId: string, productId: string):
 
 export const updateCartQuantityDatabase = async (userId: string, productId: string, quantity: number): Promise<boolean> => {
   try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, skipping cart sync');
+      return true;
+    }
+
     if (quantity <= 0) {
       return removeFromCartDatabase(userId, productId);
     }
@@ -71,6 +81,11 @@ export const updateCartQuantityDatabase = async (userId: string, productId: stri
 
 export const getCartFromDatabase = async (userId: string): Promise<CartItem[]> => {
   try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, returning empty cart');
+      return [];
+    }
+
     const { data, error } = await supabase
       .from('cart_items')
       .select(`
@@ -106,6 +121,11 @@ export const getCartFromDatabase = async (userId: string): Promise<CartItem[]> =
 
 export const clearCartDatabase = async (userId: string): Promise<boolean> => {
   try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, skipping cart sync');
+      return true;
+    }
+
     const { error } = await supabase
       .from('cart_items')
       .delete()
