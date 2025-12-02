@@ -40,6 +40,7 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       .eq('email', emailLower);
 
     if (checkError) {
+      console.error('Check user error:', checkError);
       return { success: false, error: checkError.message };
     }
 
@@ -48,17 +49,26 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     }
 
     // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: emailLower,
-      password,
-    });
+    let authData: any;
+    let authError: any;
+    try {
+      const response = await supabase.auth.signUp({
+        email: emailLower,
+        password,
+      });
+      authData = response.data;
+      authError = response.error;
+    } catch (e) {
+      console.error('Signup auth exception:', e);
+      return { success: false, error: 'Failed to create account. Please try again.' };
+    }
 
     if (authError) {
       console.error('Signup auth error:', authError);
       return { success: false, error: authError.message || 'Signup failed.' };
     }
 
-    if (!authData.user) {
+    if (!authData?.user) {
       return { success: false, error: 'Signup failed: No user created.' };
     }
 
@@ -75,11 +85,13 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       .single();
 
     if (insertError) {
+      console.error('Insert user error:', insertError);
       return { success: false, error: insertError.message };
     }
 
     return { success: true, user: newUser };
   } catch (err) {
+    console.error('Signup exception:', err);
     return { success: false, error: 'Signup failed. Please try again.' };
   }
 };
