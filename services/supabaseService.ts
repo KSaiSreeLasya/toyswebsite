@@ -12,11 +12,43 @@ if (!supabaseUrl || !supabaseAnonKey) {
   console.log('Supabase initialized with URL:', supabaseUrl);
 }
 
+// Custom fetch wrapper to handle body stream errors
+const customFetch = (url: string, init?: RequestInit) => {
+  return fetch(url, init).then(async (response) => {
+    // If response is not ok and has a body, clone it for error handling
+    if (!response.ok && response.body) {
+      const clonedResponse = response.clone();
+      try {
+        const errorData = await clonedResponse.json();
+        console.error('Supabase API Error:', {
+          status: response.status,
+          url: url,
+          data: errorData
+        });
+      } catch (e) {
+        const text = await clonedResponse.text();
+        console.error('Supabase API Error (text):', {
+          status: response.status,
+          url: url,
+          text: text
+        });
+      }
+    }
+    return response;
+  }).catch((error) => {
+    console.error('Fetch error:', error);
+    throw error;
+  });
+};
+
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
+  },
+  global: {
+    fetch: customFetch
   }
 });
 
