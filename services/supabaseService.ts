@@ -3,22 +3,31 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Supabase credentials not found!', {
-    url: supabaseUrl ? 'found' : 'MISSING',
-    key: supabaseAnonKey ? 'found' : 'MISSING'
-  });
+const isSupabaseConfigured = !!supabaseUrl && !!supabaseAnonKey;
+
+if (!isSupabaseConfigured) {
+  console.warn('Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY environment variables.');
 } else {
   console.log('Supabase initialized with URL:', supabaseUrl);
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    autoRefreshToken: true,
-    persistSession: true,
-    detectSessionInUrl: true,
-  }
-});
+export const supabase = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: true,
+      }
+    })
+  : createClient('https://placeholder.supabase.co', 'placeholder-key', {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false,
+      }
+    });
+
+export const isSupabaseEnabled = isSupabaseConfigured;
 
 export interface UserAccount {
   id?: string;
