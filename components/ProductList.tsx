@@ -9,6 +9,7 @@ const ProductList: React.FC = () => {
   const { products, addToCart, searchQuery, user, toggleWishlist } = useStore();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [priceRange, setPriceRange] = useState(15000);
+  const [showAllCategories, setShowAllCategories] = useState(false);
   const location = useLocation();
   const showWishlistOnly = new URLSearchParams(location.search).get('wishlist') === 'true';
 
