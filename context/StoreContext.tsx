@@ -113,9 +113,10 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // Initialize admin user (only once per session)
       const adminSetupDone = sessionStorage.getItem('admin_setup_done');
       if (!adminSetupDone) {
-        fetch('http://localhost:5000/api/setup-admin', { method: 'POST' })
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+        fetch(`${apiUrl}/api/setup-admin`, { method: 'POST' })
           .then(() => sessionStorage.setItem('admin_setup_done', 'true'))
-          .catch(err => console.log('Admin setup attempt:', err));
+          .catch(err => console.log('Admin setup attempt (non-critical):', err));
       }
     };
 
