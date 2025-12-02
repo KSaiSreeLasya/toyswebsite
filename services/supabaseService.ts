@@ -102,3 +102,33 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
 export const signOut = async (): Promise<void> => {
   await supabase.auth.signOut();
 };
+
+export const initializeAdminUser = async (): Promise<{ success: boolean; message: string }> => {
+  try {
+    const adminEmail = 'admin@gmail.com';
+    const adminPassword = 'admin2024';
+
+    // Check if admin user already exists in the database
+    const { data: existingAdmin, error: checkError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('email', adminEmail)
+      .eq('role', 'ADMIN');
+
+    if (!checkError && existingAdmin && existingAdmin.length > 0) {
+      return { success: true, message: 'Admin user already exists.' };
+    }
+
+    // Try to sign up the admin user
+    const signUpResult = await signUp(adminEmail, adminPassword, 'ADMIN');
+
+    if (signUpResult.success) {
+      return { success: true, message: 'Admin user created successfully.' };
+    } else {
+      return { success: false, message: signUpResult.error || 'Failed to create admin user.' };
+    }
+  } catch (error) {
+    console.error('Initialize Admin Error:', error);
+    return { success: false, message: 'Error initializing admin user.' };
+  }
+};
