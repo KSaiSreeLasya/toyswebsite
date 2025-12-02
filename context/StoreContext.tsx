@@ -247,6 +247,29 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         console.log('Error loading cart from database:', err);
       }
 
+      // Load user's orders from localStorage (user-specific)
+      try {
+        const userOrdersKey = `wl_orders_${newUser.id}`;
+        const storedUserOrders = localStorage.getItem(userOrdersKey);
+        if (storedUserOrders) {
+          const userOrders = JSON.parse(storedUserOrders);
+          setOrders(userOrders);
+        } else {
+          // Check if orders exist in old global key and migrate them if they belong to this user
+          const globalOrdersStr = localStorage.getItem('wl_orders');
+          if (globalOrdersStr) {
+            const globalOrders = JSON.parse(globalOrdersStr);
+            const userSpecificOrders = globalOrders.filter((order: Order) => order.userId === newUser.id);
+            if (userSpecificOrders.length > 0) {
+              setOrders(userSpecificOrders);
+              localStorage.setItem(userOrdersKey, JSON.stringify(userSpecificOrders));
+            }
+          }
+        }
+      } catch (err) {
+        console.log('Error loading user orders:', err);
+      }
+
       return { success: true };
     } catch (err) {
       console.error('Login error:', err);
