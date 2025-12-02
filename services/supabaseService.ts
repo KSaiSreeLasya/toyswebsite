@@ -115,7 +115,7 @@ export const initializeAdminUser = async (): Promise<{ success: boolean; message
       .from('users')
       .select('id')
       .eq('email', adminEmail)
-      .eq('role', 'ADMIN');
+      .eq('role', 'admin');
 
     if (!checkError && existingAdmin && existingAdmin.length > 0) {
       return { success: true, message: 'Admin user already exists.' };
