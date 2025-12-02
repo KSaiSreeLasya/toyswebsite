@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { GoogleGenAI } from '@google/genai';
+import { createClient } from '@supabase/supabase-js';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -15,6 +16,11 @@ if (!apiKey) {
 }
 
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+
+const supabaseAdmin = supabaseServiceKey && supabaseUrl ? createClient(supabaseUrl, supabaseServiceKey) : null;
 
 interface GenerateDescriptionRequest {
   productName: string;
@@ -94,11 +100,92 @@ app.post('/api/gift-recommendation', async (req: Request<{}, {}, GiftRecommendat
   }
 });
 
+app.post('/api/setup-admin', async (req: Request, res: Response) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(500).json({ error: 'Supabase admin client not configured. Service Role Key is missing.' });
+    }
+
+    const adminEmail = 'admin@gmail.com';
+    const adminPassword = 'admin2024';
+
+    // Check if admin user already exists in auth
+    const { data: { users: existingAuthUsers } } = await supabaseAdmin.auth.admin.listUsers();
+    const adminAuthExists = existingAuthUsers?.some(u => u.email === adminEmail);
+
+    if (adminAuthExists) {
+      // Check if admin profile exists in users table
+      const { data: adminProfile } = await supabaseAdmin
+        .from('users')
+        .select('*')
+        .eq('email', adminEmail)
+        .eq('role', 'ADMIN')
+        .single();
+
+      if (adminProfile) {
+        return res.json({
+          success: true,
+          message: 'Admin user already exists.',
+          email: adminEmail
+        });
+      }
+    }
+
+    // Create auth user if doesn't exist
+    let authUserId: string;
+    if (!adminAuthExists) {
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: adminEmail,
+        password: adminPassword,
+        email_confirm: true,
+      });
+
+      if (authError || !authData.user) {
+        return res.status(400).json({ error: authError?.message || 'Failed to create auth user.' });
+      }
+      authUserId = authData.user.id;
+    } else {
+      // Get existing user ID
+      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
+      const user = users?.find(u => u.email === adminEmail);
+      if (!user) {
+        return res.status(400).json({ error: 'Could not find existing admin user.' });
+      }
+      authUserId = user.id;
+    }
+
+    // Create or update admin profile in users table
+    const { error: upsertError } = await supabaseAdmin
+      .from('users')
+      .upsert({
+        id: authUserId,
+        email: adminEmail,
+        role: 'ADMIN',
+        name: 'Admin',
+      }, { onConflict: 'id' });
+
+    if (upsertError) {
+      return res.status(400).json({ error: upsertError.message });
+    }
+
+    res.json({
+      success: true,
+      message: 'Admin user created successfully.',
+      email: adminEmail,
+      password: adminPassword
+    });
+  } catch (error) {
+    console.error('Setup Admin Error:', error);
+    res.status(500).json({ error: 'Failed to setup admin user.' });
+  }
+});
+
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     apiKeyConfigured: !!apiKey,
-    message: apiKey ? 'API is ready' : 'API Key not configured - add GEMINI_API_KEY environment variable'
+    supabaseConfigured: !!supabaseAdmin,
+    message: supabaseAdmin ? 'API is ready with Supabase' : 'API Key or Supabase not configured'
   });
 });
 
