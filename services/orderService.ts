@@ -4,6 +4,8 @@ import { CartItem, Order } from '../types';
 export const createOrderInDatabase = async (userId: string, items: CartItem[], total: number): Promise<Order | null> => {
   try {
     const orderId = `ORD-${Date.now()}`;
+    const coinsEarned = Math.floor(total / 100);
+    const discount = Math.floor(total * 0.01);
 
     if (!isSupabaseEnabled) {
       console.log('Supabase not configured, creating local order only');
@@ -13,7 +15,9 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
         items,
         total,
         date: new Date().toISOString(),
-        status: 'pending'
+        status: 'pending',
+        coinsEarned,
+        discount
       };
       return order;
     }
