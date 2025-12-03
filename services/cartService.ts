@@ -1,10 +1,20 @@
 import { supabase, isSupabaseEnabled } from './supabaseService';
 import { CartItem } from '../types';
 
+const isValidUUID = (id: string): boolean => {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(id);
+};
+
 export const addToCartDatabase = async (userId: string, product: CartItem): Promise<boolean> => {
   try {
     if (!isSupabaseEnabled) {
       console.log('Supabase not configured, skipping cart sync');
+      return true;
+    }
+
+    if (!isValidUUID(userId)) {
+      console.warn('Invalid user ID format, skipping cart sync:', userId);
       return true;
     }
 
