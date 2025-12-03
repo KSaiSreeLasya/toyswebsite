@@ -455,7 +455,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       user, products, cart, orders, teamMembers, login, signup, logout,
       addToCart, removeFromCart, updateCartQuantity, clearCart,
       addProduct, updateProduct, deleteProduct, placeOrder, addTeamMember, removeTeamMember,
-      toggleWishlist,
+      toggleWishlist, updateUserCoins,
       searchQuery, setSearchQuery,
       shippingPolicy, setShippingPolicy,
       returnsPolicy, setReturnsPolicy,
