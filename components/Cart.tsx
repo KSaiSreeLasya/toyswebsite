@@ -82,7 +82,8 @@ const Cart: React.FC = () => {
     } catch (error: any) {
       console.error('Payment error:', error);
       setIsProcessing(false);
-      alert(error.message || 'Payment failed. Please try again.');
+      const errorMessage = error?.message || (typeof error === 'string' ? error : 'Payment failed. Please try again.');
+      alert(errorMessage);
     }
   };
 
