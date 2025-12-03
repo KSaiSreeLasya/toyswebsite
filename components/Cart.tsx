@@ -75,6 +75,18 @@ const Cart: React.FC = () => {
 
       const razorpayResponse = await openRazorpayCheckout(options);
 
+      // Verify the payment with backend
+      const isVerified = await verifyPayment({
+        razorpay_order_id: razorpayResponse.razorpay_order_id,
+        razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+        razorpay_signature: razorpayResponse.razorpay_signature
+      });
+
+      if (!isVerified) {
+        throw new Error('Payment verification failed. Please contact support.');
+      }
+
+      // Only create order after payment is verified
       await placeOrder(useCoins ? coinsUsed : 0);
 
       setIsProcessing(false);
