@@ -3,8 +3,8 @@ import { useStore } from '../context/StoreContext';
 import { Wallet, ShoppingBag, Gift } from 'lucide-react';
 
 const MyWallet: React.FC = () => {
-  const { cart } = useStore();
-  const [coinsBalance] = useState(74);
+  const { user } = useStore();
+  const coinsBalance = user?.coinBalance || 74;
 
   const coinsPerRupee = 1;
   const coinsPerDiscount = 10;
