@@ -41,7 +41,7 @@ const ProfileDashboard: React.FC = () => {
             <div className="bg-white/20 rounded-2xl px-4 py-3 border border-white/30">
               <p className="text-sm font-medium text-white/80">COIN BALANCE</p>
               <div className="flex items-center gap-2 mt-1">
-                <span className="text-3xl font-bold">74</span>
+                <span className="text-3xl font-bold">{user.coinBalance || 74}</span>
                 <span className="text-2xl">🎁</span>
               </div>
             </div>
