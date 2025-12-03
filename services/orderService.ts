@@ -132,7 +132,7 @@ export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> =>
   }
 };
 
-export const updateOrderStatus = async (orderId: string, status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'): Promise<boolean> => {
+export const updateOrderStatus = async (orderId: string, status: 'pending' | 'packed' | 'shipped' | 'delivered' | 'cancelled'): Promise<boolean> => {
   try {
     if (!isSupabaseEnabled) {
       console.log('Supabase not configured, skipping order status update');
