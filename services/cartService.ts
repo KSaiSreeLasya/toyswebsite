@@ -17,7 +17,7 @@ export const addToCartDatabase = async (userId: string, product: CartItem): Prom
       }, { onConflict: 'user_id,product_id' });
 
     if (error) {
-      console.error('Error adding to cart:', error);
+      console.error('Error adding to cart:', error?.message || String(error));
       return false;
     }
     return true;
