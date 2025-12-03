@@ -58,7 +58,9 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
       items,
       total,
       date: new Date().toISOString(),
-      status: 'pending'
+      status: 'pending',
+      coinsEarned,
+      discount
     };
 
     return order;
