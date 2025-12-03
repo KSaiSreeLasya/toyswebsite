@@ -78,13 +78,14 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       return { success: false, error: 'Signup failed: No user created.' };
     }
 
+    const authUserId = authData.user.id;
     console.log('Auth signup successful, creating user profile');
 
     // Insert user record in users table
     const { data: newUser, error: insertError } = await supabase
       .from('users')
       .insert({
-        id: authData.user.id,
+        id: authUserId,
         email: emailLower,
         role: roleLower,
         name: emailLower.split('@')[0],
@@ -98,7 +99,7 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     }
 
     console.log('Signup successful');
-    return { success: true, user: newUser };
+    return { success: true, user: { ...newUser, id: authUserId } };
   } catch (err) {
     console.error('Signup exception:', err);
     return { success: false, error: 'Signup failed. Please try again.' };
