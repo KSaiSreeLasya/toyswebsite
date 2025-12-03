@@ -2,6 +2,7 @@ import { supabase, isSupabaseEnabled } from './supabaseService';
 import { CartItem } from '../types';
 
 const isValidUUID = (id: string): boolean => {
+  if (!id || typeof id !== 'string') return false;
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   return uuidRegex.test(id);
 };
@@ -18,6 +19,11 @@ export const addToCartDatabase = async (userId: string, product: CartItem): Prom
       return true;
     }
 
+    if (!product.id) {
+      console.warn('Invalid product ID, skipping cart sync:', product.id);
+      return true;
+    }
+
     const { error } = await supabase
       .from('cart_items')
       .upsert({
@@ -27,12 +33,12 @@ export const addToCartDatabase = async (userId: string, product: CartItem): Prom
       }, { onConflict: 'user_id,product_id' });
 
     if (error) {
-      console.error('Error adding to cart:', error?.message || String(error));
+      console.error(`Error adding to cart: ${error?.message || JSON.stringify(error)}`);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Error in addToCartDatabase:', err);
+    console.error(`Error in addToCartDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return false;
   }
 };
@@ -49,6 +55,11 @@ export const removeFromCartDatabase = async (userId: string, productId: string):
       return true;
     }
 
+    if (!productId) {
+      console.warn('Invalid product ID, skipping cart sync:', productId);
+      return true;
+    }
+
     const { error } = await supabase
       .from('cart_items')
       .delete()
@@ -56,12 +67,12 @@ export const removeFromCartDatabase = async (userId: string, productId: string):
       .eq('product_id', productId);
 
     if (error) {
-      console.error('Error removing from cart:', error?.message || String(error));
+      console.error(`Error removing from cart: ${error?.message || JSON.stringify(error)}`);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Error in removeFromCartDatabase:', err);
+    console.error(`Error in removeFromCartDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return false;
   }
 };
@@ -78,6 +89,11 @@ export const updateCartQuantityDatabase = async (userId: string, productId: stri
       return true;
     }
 
+    if (!productId) {
+      console.warn('Invalid product ID, skipping cart sync:', productId);
+      return true;
+    }
+
     if (quantity <= 0) {
       return removeFromCartDatabase(userId, productId);
     }
@@ -89,12 +105,12 @@ export const updateCartQuantityDatabase = async (userId: string, productId: stri
       .eq('product_id', productId);
 
     if (error) {
-      console.error('Error updating cart quantity:', error?.message || String(error));
+      console.error(`Error updating cart quantity: ${error?.message || JSON.stringify(error)}`);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Error in updateCartQuantityDatabase:', err);
+    console.error(`Error in updateCartQuantityDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return false;
   }
 };
@@ -129,7 +145,7 @@ export const getCartFromDatabase = async (userId: string): Promise<CartItem[]> =
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Error fetching cart:', error?.message || String(error));
+      console.error(`Error fetching cart: ${error?.message || JSON.stringify(error)}`);
       return [];
     }
 
@@ -139,7 +155,7 @@ export const getCartFromDatabase = async (userId: string): Promise<CartItem[]> =
       quantity: item.quantity
     }));
   } catch (err) {
-    console.error('Error in getCartFromDatabase:', err);
+    console.error(`Error in getCartFromDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return [];
   }
 };
@@ -162,12 +178,12 @@ export const clearCartDatabase = async (userId: string): Promise<boolean> => {
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Error clearing cart:', error?.message || String(error));
+      console.error(`Error clearing cart: ${error?.message || JSON.stringify(error)}`);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Error in clearCartDatabase:', err);
+    console.error(`Error in clearCartDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return false;
   }
 };
