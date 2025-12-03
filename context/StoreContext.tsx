@@ -29,6 +29,7 @@ interface StoreContextType {
   addTeamMember: (member: User) => void;
   removeTeamMember: (id: string) => void;
   toggleWishlist: (productId: string) => void;
+  updateUserCoins: (coinDelta: number) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   setShippingPolicy: (policy: string) => void;
