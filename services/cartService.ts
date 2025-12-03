@@ -73,6 +73,11 @@ export const updateCartQuantityDatabase = async (userId: string, productId: stri
       return true;
     }
 
+    if (!isValidUUID(userId)) {
+      console.warn('Invalid user ID format, skipping cart sync:', userId);
+      return true;
+    }
+
     if (quantity <= 0) {
       return removeFromCartDatabase(userId, productId);
     }
@@ -98,6 +103,11 @@ export const getCartFromDatabase = async (userId: string): Promise<CartItem[]> =
   try {
     if (!isSupabaseEnabled) {
       console.log('Supabase not configured, returning empty cart');
+      return [];
+    }
+
+    if (!isValidUUID(userId)) {
+      console.warn('Invalid user ID format, returning empty cart:', userId);
       return [];
     }
 
@@ -138,6 +148,11 @@ export const clearCartDatabase = async (userId: string): Promise<boolean> => {
   try {
     if (!isSupabaseEnabled) {
       console.log('Supabase not configured, skipping cart sync');
+      return true;
+    }
+
+    if (!isValidUUID(userId)) {
+      console.warn('Invalid user ID format, skipping cart sync:', userId);
       return true;
     }
 
