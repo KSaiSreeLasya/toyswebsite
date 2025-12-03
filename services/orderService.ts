@@ -100,24 +100,32 @@ export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> =>
       return [];
     }
 
-    return (data || []).map((order: any) => ({
-      id: order.id,
-      userId: order.user_id,
-      items: order.order_items.map((item: any) => ({
-        id: item.product_id,
-        name: item.product_name,
-        quantity: item.quantity,
-        price: item.unit_price,
-        description: '',
-        category: '',
-        imageUrl: '',
-        rating: 0,
-        stock: 0
-      })),
-      total: order.total_amount,
-      date: order.created_at,
-      status: order.status
-    }));
+    return (data || []).map((order: any) => {
+      const total = order.total_amount;
+      const coinsEarned = Math.floor(total / 100);
+      const discount = Math.floor(total * 0.01);
+
+      return {
+        id: order.id,
+        userId: order.user_id,
+        items: order.order_items.map((item: any) => ({
+          id: item.product_id,
+          name: item.product_name,
+          quantity: item.quantity,
+          price: item.unit_price,
+          description: '',
+          category: '',
+          imageUrl: '',
+          rating: 0,
+          stock: 0
+        })),
+        total: order.total_amount,
+        date: order.created_at,
+        status: order.status,
+        coinsEarned,
+        discount
+      };
+    });
   } catch (err) {
     console.error('Error in getOrdersFromDatabase:', err);
     return [];
