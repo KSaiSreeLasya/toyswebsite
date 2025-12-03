@@ -52,7 +52,7 @@ export const createRazorpayOrder = async (
 
     return data;
   } catch (error) {
-    console.error('Error creating Razorpay order:', error);
+    console.error(`Error creating Razorpay order: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
 
     const mockOrder: RazorpayOrderResponse = {
       id: `order_${Date.now()}`,
@@ -118,7 +118,7 @@ export const verifyPayment = async (
     const data = await response.json();
     return data.success;
   } catch (error) {
-    console.error('Error verifying payment:', error);
+    console.error(`Error verifying payment: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
     return false;
   }
 };
