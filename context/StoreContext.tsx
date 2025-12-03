@@ -209,13 +209,23 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           }
       }
 
+      const storedUserStr2 = localStorage.getItem('wl_user');
+      let previousCoinBalance = 74;
+      if (storedUserStr2) {
+          const stored = JSON.parse(storedUserStr2);
+          if (stored.email === email) {
+              previousCoinBalance = stored.coinBalance || 74;
+          }
+      }
+
       const newUser: User = existingTeamMember || {
         id: result.user?.id || Date.now().toString(),
         name: result.user?.name || email.split('@')[0],
         email,
         role,
         permissions,
-        wishlist: previousWishlist
+        wishlist: previousWishlist,
+        coinBalance: previousCoinBalance
       };
 
       setUser(newUser);
