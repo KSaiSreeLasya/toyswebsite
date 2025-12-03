@@ -32,7 +32,7 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
       });
 
     if (orderError) {
-      console.error('Error creating order:', orderError);
+      console.error(`Error creating order: ${orderError?.message || JSON.stringify(orderError)}`);
       return null;
     }
 
@@ -48,7 +48,7 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
         });
 
       if (itemError) {
-        console.error('Error creating order item:', itemError);
+        console.error(`Error creating order item: ${itemError?.message || JSON.stringify(itemError)}`);
       }
     }
 
@@ -65,7 +65,7 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
 
     return order;
   } catch (err) {
-    console.error('Error in createOrderInDatabase:', err);
+    console.error(`Error in createOrderInDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return null;
   }
 };
@@ -96,7 +96,7 @@ export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> =>
       .order('created_at', { ascending: false });
 
     if (error) {
-      console.error('Error fetching orders:', error);
+      console.error(`Error fetching orders: ${error?.message || JSON.stringify(error)}`);
       return [];
     }
 
@@ -127,7 +127,7 @@ export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> =>
       };
     });
   } catch (err) {
-    console.error('Error in getOrdersFromDatabase:', err);
+    console.error(`Error in getOrdersFromDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return [];
   }
 };
@@ -145,12 +145,12 @@ export const updateOrderStatus = async (orderId: string, status: 'pending' | 'pa
       .eq('id', orderId);
 
     if (error) {
-      console.error('Error updating order status:', error);
+      console.error(`Error updating order status: ${error?.message || JSON.stringify(error)}`);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Error in updateOrderStatus:', err);
+    console.error(`Error in updateOrderStatus: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return false;
   }
 };
