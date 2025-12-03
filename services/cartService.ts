@@ -44,7 +44,7 @@ export const removeFromCartDatabase = async (userId: string, productId: string):
       return true;
     }
 
-    if (!isValidUUID(userId)) {
+    if (!userId || !isValidUUID(userId)) {
       console.warn('Invalid user ID format, skipping cart sync:', userId);
       return true;
     }
@@ -73,7 +73,7 @@ export const updateCartQuantityDatabase = async (userId: string, productId: stri
       return true;
     }
 
-    if (!isValidUUID(userId)) {
+    if (!userId || !isValidUUID(userId)) {
       console.warn('Invalid user ID format, skipping cart sync:', userId);
       return true;
     }
@@ -106,7 +106,7 @@ export const getCartFromDatabase = async (userId: string): Promise<CartItem[]> =
       return [];
     }
 
-    if (!isValidUUID(userId)) {
+    if (!userId || !isValidUUID(userId)) {
       console.warn('Invalid user ID format, returning empty cart:', userId);
       return [];
     }
@@ -151,7 +151,7 @@ export const clearCartDatabase = async (userId: string): Promise<boolean> => {
       return true;
     }
 
-    if (!isValidUUID(userId)) {
+    if (!userId || !isValidUUID(userId)) {
       console.warn('Invalid user ID format, skipping cart sync:', userId);
       return true;
     }
