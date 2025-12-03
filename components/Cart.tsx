@@ -22,7 +22,7 @@ const Cart: React.FC = () => {
     e.preventDefault();
     setIsProcessing(true);
     try {
-      await placeOrder();
+      await placeOrder(useCoins ? coinsUsed : 0);
       // Simulate processing animation delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       setIsProcessing(false);
