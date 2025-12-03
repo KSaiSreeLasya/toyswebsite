@@ -12,7 +12,7 @@ const Cart: React.FC = () => {
   const [coinsUsed, setCoinsUsed] = useState(0);
   const navigate = useNavigate();
 
-  const availableCoins = 74;
+  const availableCoins = user?.coinBalance || 74;
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const tax = subtotal * 0.18; // GST roughly 18% in India for some toys
   const coinDiscount = useCoins ? coinsUsed : 0;
