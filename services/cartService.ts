@@ -41,7 +41,7 @@ export const removeFromCartDatabase = async (userId: string, productId: string):
       .eq('product_id', productId);
 
     if (error) {
-      console.error('Error removing from cart:', error);
+      console.error('Error removing from cart:', error?.message || String(error));
       return false;
     }
     return true;
@@ -69,7 +69,7 @@ export const updateCartQuantityDatabase = async (userId: string, productId: stri
       .eq('product_id', productId);
 
     if (error) {
-      console.error('Error updating cart quantity:', error);
+      console.error('Error updating cart quantity:', error?.message || String(error));
       return false;
     }
     return true;
@@ -104,7 +104,7 @@ export const getCartFromDatabase = async (userId: string): Promise<CartItem[]> =
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Error fetching cart:', error);
+      console.error('Error fetching cart:', error?.message || String(error));
       return [];
     }
 
@@ -132,7 +132,7 @@ export const clearCartDatabase = async (userId: string): Promise<boolean> => {
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Error clearing cart:', error);
+      console.error('Error clearing cart:', error?.message || String(error));
       return false;
     }
     return true;
