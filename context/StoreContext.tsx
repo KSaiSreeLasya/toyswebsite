@@ -75,7 +75,6 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const initializeData = async () => {
       try {
-        const storedUser = localStorage.getItem('wl_user');
         const storedCart = localStorage.getItem('wl_cart');
         const storedOrders = localStorage.getItem('wl_orders');
         const storedProducts = localStorage.getItem('wl_products');
@@ -87,16 +86,21 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
         // Clean up invalid user data from old sessions
         let parsedUser = null;
+        const storedUser = localStorage.getItem('wl_user');
         if (storedUser) {
           try {
             parsedUser = JSON.parse(storedUser);
             if (parsedUser && parsedUser.id && !isValidUUID(parsedUser.id)) {
               console.log('Clearing cached user with invalid UUID:', parsedUser.id);
               localStorage.removeItem('wl_user');
+              localStorage.removeItem('wl_cart');
               parsedUser = null;
             }
           } catch (e) {
             console.error('Error parsing stored user:', e);
+            localStorage.removeItem('wl_user');
+            localStorage.removeItem('wl_cart');
+            parsedUser = null;
           }
         }
 
