@@ -5,6 +5,7 @@ import { signUp, signIn, signOut } from '../services/supabaseService';
 import { syncProductsToDatabase, getProductsFromDatabase } from '../services/productService';
 import { addToCartDatabase, removeFromCartDatabase, updateCartQuantityDatabase, getCartFromDatabase, clearCartDatabase } from '../services/cartService';
 import { createOrderInDatabase, getOrdersFromDatabase } from '../services/orderService';
+import { generateUUID } from '../utils/uuid';
 
 interface StoreContextType {
   user: User | null;
@@ -67,6 +68,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   // Persist data in localStorage and sync with Supabase
   useEffect(() => {
+    const isValidUUID = (id: string): boolean => {
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      return uuidRegex.test(id);
+    };
+
     const initializeData = async () => {
       try {
         const storedUser = localStorage.getItem('wl_user');
@@ -79,7 +85,22 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         const storedPayment = localStorage.getItem('wl_payment_config');
         const storedAccounts = localStorage.getItem('wl_accounts');
 
-        if (storedUser) setUser(JSON.parse(storedUser));
+        // Clean up invalid user data from old sessions
+        let parsedUser = null;
+        if (storedUser) {
+          try {
+            parsedUser = JSON.parse(storedUser);
+            if (parsedUser && parsedUser.id && !isValidUUID(parsedUser.id)) {
+              console.log('Clearing cached user with invalid UUID:', parsedUser.id);
+              localStorage.removeItem('wl_user');
+              parsedUser = null;
+            }
+          } catch (e) {
+            console.error('Error parsing stored user:', e);
+          }
+        }
+
+        if (parsedUser) setUser(parsedUser);
         if (storedCart) setCart(JSON.parse(storedCart));
         if (storedOrders) setOrders(JSON.parse(storedOrders));
         if (storedShipping) setShippingPolicy(storedShipping);
@@ -219,7 +240,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
 
       const newUser: User = existingTeamMember || {
-        id: result.user?.id || Date.now().toString(),
+        id: result.user?.id || generateUUID(),
         name: result.user?.name || email.split('@')[0],
         email,
         role,

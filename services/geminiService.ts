@@ -13,9 +13,13 @@ export const generateProductDescription = async (productName: string, category: 
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('API Error:', error);
-      return error.error || 'Could not generate description at this time.';
+      try {
+        const error = await response.json();
+        console.error('API Error:', error);
+        return error.error || 'Could not generate description at this time.';
+      } catch {
+        return 'Could not generate description at this time.';
+      }
     }
 
     const data = await response.json();
@@ -44,9 +48,13 @@ export const getGiftRecommendation = async (query: string, availableProducts: Pr
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('API Error:', error);
-      return error.error || 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
+      try {
+        const error = await response.json();
+        console.error('API Error:', error);
+        return error.error || 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
+      } catch {
+        return 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
+      }
     }
 
     const data = await response.json();
