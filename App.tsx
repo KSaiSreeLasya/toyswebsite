@@ -14,7 +14,7 @@ import { UserRole } from './types';
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactElement; role?: UserRole }> = ({ children, role }) => {
   const { user } = useStore();
-  
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
@@ -26,31 +26,37 @@ const ProtectedRoute: React.FC<{ children: React.ReactElement; role?: UserRole }
   return children;
 };
 
+const AppRoutes: React.FC = () => {
+  return (
+    <Routes>
+      <Route path="/" element={<ProductList />} />
+      <Route path="/product/:id" element={<ProductDetail />} />
+      <Route path="/cart" element={<Cart />} />
+      <Route path="/login" element={<Auth />} />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfileDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute role={UserRole.ADMIN}>
+            <AdminPanel />
+          </ProtectedRoute>
+        }
+      />
+    </Routes>
+  );
+};
+
 const AppContent: React.FC = () => {
   return (
     <Layout>
-      <Routes>
-        <Route path="/" element={<ProductList />} />
-        <Route path="/product/:id" element={<ProductDetail />} />
-        <Route path="/cart" element={<Cart />} />
-        <Route path="/login" element={<Auth />} />
-        <Route
-          path="/profile"
-          element={
-            <ProtectedRoute>
-              <ProfileDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute role={UserRole.ADMIN}>
-              <AdminPanel />
-            </ProtectedRoute>
-          }
-        />
-      </Routes>
+      <AppRoutes />
       <ToyGeni />
     </Layout>
   );
@@ -58,11 +64,11 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <StoreProvider>
-      <HashRouter>
+    <HashRouter>
+      <StoreProvider>
         <AppContent />
-      </HashRouter>
-    </StoreProvider>
+      </StoreProvider>
+    </HashRouter>
   );
 };
 
