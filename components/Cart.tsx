@@ -368,11 +368,11 @@ const Cart: React.FC = () => {
               </div>
 
               <div className="flex gap-3 mt-6">
-                 <button 
+                 <button
                   type="button"
                   onClick={() => setIsCheckingOut(false)}
                   disabled={isProcessing}
-                  className="flex-1 bg-gray-100 text-gray-700 font-bold py-2 rounded-xl hover:bg-gray-200 transition-colors border-2 border-transparent hover:border-gray-300"
+                  className="flex-1 bg-gray-100 text-gray-700 font-bold py-2 rounded-xl hover:bg-gray-200 transition-colors border-2 border-transparent hover:border-gray-300 disabled:opacity-50"
                 >
                   Back
                 </button>
@@ -384,11 +384,11 @@ const Cart: React.FC = () => {
                   {isProcessing ? (
                     <div className="flex items-center gap-2">
                       <Loader2 size={18} className="animate-spin" />
-                      <span>Processing...</span>
+                      <span>Opening Razorpay...</span>
                     </div>
                   ) : (
                     <>
-                      <span>Pay ₹{total.toFixed(2)}</span>
+                      <span>Pay ₹{total.toFixed(2)} with Razorpay</span>
                       {coinDiscount > 0 && <span className="text-xs text-green-100">You saved ₹{coinDiscount.toFixed(2)} with coins!</span>}
                     </>
                   )}
