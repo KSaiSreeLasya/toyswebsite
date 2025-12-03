@@ -408,12 +408,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setPaymentConfig(config);
   };
 
-  const placeOrder = async () => {
+  const placeOrder = async (coinsUsed: number = 0) => {
     if (!user) {
       throw new Error('User not logged in');
     }
 
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const tax = subtotal * 0.18;
+    const total = Math.max(0, subtotal + tax - coinsUsed);
 
     // Create order in Supabase or locally
     const newOrder = await createOrderInDatabase(user.id, cart, total);
@@ -435,6 +437,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           }
           return p;
       }));
+
+      // Update user coins: deduct used coins and add earned coins
+      const coinsEarned = newOrder.coinsEarned || 0;
+      const netCoinChange = coinsEarned - coinsUsed;
+      updateUserCoins(netCoinChange);
 
       clearCart();
       return newOrder;
