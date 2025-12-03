@@ -5,6 +5,7 @@ import { signUp, signIn, signOut } from '../services/supabaseService';
 import { syncProductsToDatabase, getProductsFromDatabase } from '../services/productService';
 import { addToCartDatabase, removeFromCartDatabase, updateCartQuantityDatabase, getCartFromDatabase, clearCartDatabase } from '../services/cartService';
 import { createOrderInDatabase, getOrdersFromDatabase } from '../services/orderService';
+import { generateUUID } from '../utils/uuid';
 
 interface StoreContextType {
   user: User | null;
