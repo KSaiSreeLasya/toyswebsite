@@ -1,148 +1,141 @@
 import React from 'react';
 import { useStore } from '../context/StoreContext';
-import { Package, MapPin, TrendingUp } from 'lucide-react';
+import { Package } from 'lucide-react';
 
 const MyOrders: React.FC = () => {
   const { orders } = useStore();
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'text-yellow-500';
-      case 'shipped':
-        return 'text-blue-500';
-      case 'delivered':
-        return 'text-green-500';
-      default:
-        return 'text-gray-500';
-    }
+  const getStatusIndex = (status: string): number => {
+    const statusMap: Record<string, number> = {
+      'pending': 0,
+      'packed': 1,
+      'shipped': 2,
+      'delivered': 3
+    };
+    return statusMap[status] || 0;
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return '📦';
-      case 'shipped':
-        return '🚚';
-      case 'delivered':
-        return '✅';
-      default:
-        return '❓';
-    }
+  const getStatusLabel = (status: string): string => {
+    const statusMap: Record<string, string> = {
+      'pending': 'Placed',
+      'packed': 'Packed',
+      'shipped': 'Shipped',
+      'delivered': 'Delivered'
+    };
+    return statusMap[status] || status;
   };
 
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return 'Placed';
-      case 'shipped':
-        return 'Shipped';
-      case 'delivered':
-        return 'Delivered';
-      default:
-        return status;
-    }
+  const getStatusIcon = (status: string): string => {
+    const iconMap: Record<string, string> = {
+      'pending': '🎁',
+      'packed': '📦',
+      'shipped': '🚚',
+      'delivered': '✓'
+    };
+    return iconMap[status] || '?';
   };
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3 mb-8">
-        <div className="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center">
+        <div className="status-icon-container">
           <Package size={20} className="text-pink-500" />
         </div>
-        <h2 className="text-2xl font-bold text-gray-800">Order History</h2>
+        <h2 className="order-history-title">Order History</h2>
       </div>
 
       {orders.length === 0 ? (
-        <div className="bg-white rounded-2xl p-12 text-center shadow-lg">
-          <div className="text-5xl mb-4">🛍️</div>
-          <p className="text-gray-600 text-lg font-medium">No orders yet!</p>
-          <p className="text-gray-400 text-sm mt-2">Start shopping to see your orders here.</p>
+        <div className="empty-orders-card">
+          <div className="empty-emoji">🛍️</div>
+          <p className="empty-title">No orders yet!</p>
+          <p className="empty-subtitle">Start shopping to see your orders here.</p>
         </div>
       ) : (
         orders.map((order) => (
-          <div key={order.id} className="bg-white rounded-2xl p-6 shadow-lg">
+          <div key={order.id} className="order-card">
             {/* Order Header */}
-            <div className="flex items-start justify-between mb-6 pb-4 border-b-2 border-gray-100">
+            <div className="order-header">
               <div>
-                <h3 className="text-lg font-bold text-gray-800">Order #{order.id}</h3>
-                <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                  <span>🕐</span>
-                  {new Date(order.date).toLocaleDateString('en-IN', {
+                <h3 className="order-number">Order #{order.id}</h3>
+                <p className="order-date">
+                  🕐 {new Date(order.date).toLocaleDateString('en-IN', {
                     year: 'numeric',
                     month: 'numeric',
                     day: 'numeric',
                     hour: '2-digit',
                     minute: '2-digit'
-                  })}
+                  })} PM
                 </p>
               </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-pink-500">₹{order.total.toLocaleString('en-IN')}</p>
-              </div>
+              <div className="order-total">₹{order.total.toLocaleString('en-IN')}</div>
             </div>
 
             {/* Order Status Timeline */}
-            <div className="mb-6">
-              <div className="flex justify-between items-center px-2">
-                {['pending', 'shipped', 'delivered'].map((status, index) => (
-                  <div key={status} className="flex flex-col items-center flex-1">
-                    <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl mb-2 ${
-                        ['pending', 'shipped', 'delivered'].indexOf(order.status) >= index
-                          ? 'bg-green-100 text-green-600'
-                          : 'bg-gray-200 text-gray-400'
-                      }`}
-                    >
-                      {getStatusIcon(status)}
+            <div className="order-status-section">
+              <div className="status-steps">
+                {['pending', 'packed', 'shipped', 'delivered'].map((status, index) => {
+                  const currentStatusIndex = getStatusIndex(order.status);
+                  const isCompleted = currentStatusIndex >= index;
+                  
+                  return (
+                    <div key={status} className="status-step">
+                      <div className={`status-circle ${isCompleted ? 'status-completed' : 'status-pending'}`}>
+                        {isCompleted ? getStatusIcon(status) : ''}
+                      </div>
+                      <p className="status-label">{getStatusLabel(status)}</p>
                     </div>
-                    <p className="text-xs font-bold text-gray-600 text-center">{getStatusLabel(status)}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Timeline Connector */}
-              <div className="flex justify-between items-center px-14 -mt-8">
-                {[0, 1].map((i) => (
-                  <div
-                    key={i}
-                    className={`h-1 flex-1 mx-1 rounded-full ${
-                      ['pending', 'shipped', 'delivered'].indexOf(order.status) > i
-                        ? 'bg-green-500'
-                        : 'bg-gray-300'
-                    }`}
-                  ></div>
-                ))}
+              <div className="status-connector">
+                {[0, 1, 2].map((i) => {
+                  const currentStatusIndex = getStatusIndex(order.status);
+                  const isCompleted = currentStatusIndex > i;
+                  
+                  return (
+                    <div
+                      key={i}
+                      className={`connector-line ${isCompleted ? 'connector-completed' : 'connector-pending'}`}
+                    ></div>
+                  );
+                })}
               </div>
             </div>
 
             {/* Order Items */}
-            <div className="space-y-3">
+            <div className="order-items-container">
               {order.items.map((item) => (
-                <div key={item.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
+                <div key={item.id} className="order-item">
+                  <div className="item-image-container">
                     <img
                       src={item.imageUrl}
                       alt={item.name}
-                      className="w-full h-full object-cover"
+                      className="item-image"
                     />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-gray-800">{item.name}</p>
-                    <p className="text-sm text-gray-500">Qty: {item.quantity}</p>
+                  <div className="item-details">
+                    <p className="item-name">{item.name}</p>
+                    <p className="item-quantity">Qty: {item.quantity}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold text-gray-800">₹{(item.price * item.quantity).toLocaleString('en-IN')}</p>
-                    <p className="text-xs text-gray-500">₹{item.price.toLocaleString('en-IN')} each</p>
+                  <div className="item-price">
+                    <p className="item-total-price">₹{(item.price * item.quantity).toLocaleString('en-IN')}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Coins Earned Badge */}
-            <div className="mt-4 flex items-center justify-between p-3 bg-yellow-50 rounded-lg border-2 border-yellow-200">
-              <span className="text-sm font-bold text-gray-700">Coins Earned</span>
-              <span className="text-lg font-bold text-yellow-600">+74 🎁</span>
+            {/* Coins and Discount Section */}
+            <div className="rewards-section">
+              <div className="reward-item coins-earned">
+                <span className="reward-label">Coins Earned:</span>
+                <span className="reward-value coins-value">+{order.coinsEarned || 74}</span>
+              </div>
+              <div className="reward-item discount-applied">
+                <span className="reward-label">Discount Applied:</span>
+                <span className="reward-value discount-value">-{order.discount || 74}</span>
+              </div>
             </div>
           </div>
         ))
