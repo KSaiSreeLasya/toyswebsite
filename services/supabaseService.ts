@@ -56,7 +56,7 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       .eq('email', emailLower);
 
     if (checkError) {
-      console.error('Check user error:', checkError);
+      console.error(`Check user error: ${checkError?.message || JSON.stringify(checkError)}`);
     }
 
     if (existingUser && existingUser.length > 0) {
@@ -70,7 +70,7 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     });
 
     if (authError) {
-      console.error('Signup auth error:', authError);
+      console.error(`Signup auth error: ${authError?.message || JSON.stringify(authError)}`);
       return { success: false, error: authError.message || 'Signup failed.' };
     }
 
@@ -94,14 +94,14 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       .single();
 
     if (insertError) {
-      console.error('Insert user error:', insertError);
+      console.error(`Insert user error: ${insertError?.message || JSON.stringify(insertError)}`);
       return { success: false, error: insertError.message || 'Failed to create user profile.' };
     }
 
     console.log('Signup successful');
     return { success: true, user: { ...newUser, id: authUserId } };
   } catch (err) {
-    console.error('Signup exception:', err);
+    console.error(`Signup exception: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return { success: false, error: 'Signup failed. Please try again.' };
   }
 };
@@ -125,7 +125,7 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     });
 
     if (authError) {
-      console.error('Auth error details:', authError);
+      console.error(`Auth error details: ${authError?.message || JSON.stringify(authError)}`);
       return { success: false, error: authError.message || 'Authentication failed.' };
     }
 
@@ -158,7 +158,7 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
         .single();
 
       if (insertError) {
-        console.error('Insert error:', insertError);
+        console.error(`Insert error: ${insertError?.message || JSON.stringify(insertError)}`);
         return { success: false, error: 'Failed to create user record.' };
       }
 
@@ -167,14 +167,14 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     }
 
     if (selectError && user === null) {
-      console.error('User select error:', selectError);
+      console.error(`User select error: ${selectError?.message || JSON.stringify(selectError)}`);
       return { success: false, error: 'User not found.' };
     }
 
     console.log('Sign in successful');
     return { success: true, user: { ...user, id: authUserId } };
   } catch (err) {
-    console.error('Unexpected sign in error:', err);
+    console.error(`Unexpected sign in error: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return { success: false, error: 'Login failed. Please try again.' };
   }
 };
@@ -208,7 +208,7 @@ export const initializeAdminUser = async (): Promise<{ success: boolean; message
       return { success: false, message: signUpResult.error || 'Failed to create admin user.' };
     }
   } catch (error) {
-    console.error('Initialize Admin Error:', error);
+    console.error(`Initialize Admin Error: ${error instanceof Error ? error.message : JSON.stringify(error)}`);
     return { success: false, message: 'Error initializing admin user.' };
   }
 };
