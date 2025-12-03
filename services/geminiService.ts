@@ -12,17 +12,13 @@ export const generateProductDescription = async (productName: string, category: 
       body: JSON.stringify({ productName, category }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      try {
-        const error = await response.json();
-        console.error('API Error:', error);
-        return error.error || 'Could not generate description at this time.';
-      } catch {
-        return 'Could not generate description at this time.';
-      }
+      console.error('API Error:', data);
+      return data.error || 'Could not generate description at this time.';
     }
 
-    const data = await response.json();
     return data.description || '';
   } catch (error) {
     console.error('Error generating description:', error);
@@ -37,27 +33,23 @@ export const getGiftRecommendation = async (query: string, availableProducts: Pr
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ 
-        query, 
+      body: JSON.stringify({
+        query,
         availableProducts: availableProducts.map(p => ({
           name: p.name,
           price: p.price,
           category: p.category,
-        })) 
+        }))
       }),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      try {
-        const error = await response.json();
-        console.error('API Error:', error);
-        return error.error || 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
-      } catch {
-        return 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
-      }
+      console.error('API Error:', data);
+      return data.error || 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
     }
 
-    const data = await response.json();
     return data.recommendation || "I couldn't think of anything to say.";
   } catch (error) {
     console.error('Error getting recommendation:', error);
