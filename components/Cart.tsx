@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { Trash2, Plus, Minus, CreditCard, CheckCircle, ArrowRight, Loader2, MapPin, Phone, Copy } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createRazorpayOrder, openRazorpayCheckout, getTestCards } from '../services/razorpayService';
+import { createRazorpayOrder, openRazorpayCheckout, verifyPayment, getTestCards } from '../services/razorpayService';
 
 const Cart: React.FC = () => {
   const { cart, removeFromCart, updateCartQuantity, placeOrder, user } = useStore();
