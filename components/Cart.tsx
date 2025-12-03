@@ -273,17 +273,48 @@ const Cart: React.FC = () => {
                   <MapPin size={18} className="text-secondary-500" /> Shipping Details
                 </h4>
                 <div className="space-y-3">
-                  <input required placeholder="Full Name" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
-                  <input required placeholder="Address Line 1" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                  <input
+                    required
+                    placeholder="Full Name"
+                    value={shippingData.fullName}
+                    onChange={(e) => setShippingData({...shippingData, fullName: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all"
+                  />
+                  <input
+                    required
+                    placeholder="Address Line 1"
+                    value={shippingData.address}
+                    onChange={(e) => setShippingData({...shippingData, address: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all"
+                  />
                   <div className="grid grid-cols-2 gap-3">
-                     <input required placeholder="City" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
-                     <input required placeholder="ZIP Code" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                     <input
+                       required
+                       placeholder="City"
+                       value={shippingData.city}
+                       onChange={(e) => setShippingData({...shippingData, city: e.target.value})}
+                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all"
+                     />
+                     <input
+                       required
+                       placeholder="ZIP Code"
+                       value={shippingData.zipCode}
+                       onChange={(e) => setShippingData({...shippingData, zipCode: e.target.value})}
+                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all"
+                     />
                   </div>
                   <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Phone size={14} className="text-gray-400" />
                       </div>
-                      <input required type="tel" placeholder="Phone Number" className="w-full border-2 border-gray-200 rounded-xl pl-9 px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                      <input
+                        required
+                        type="tel"
+                        placeholder="Phone Number"
+                        value={shippingData.phone}
+                        onChange={(e) => setShippingData({...shippingData, phone: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl pl-9 px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all"
+                      />
                   </div>
                 </div>
               </div>
