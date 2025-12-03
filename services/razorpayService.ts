@@ -43,18 +43,13 @@ export const createRazorpayOrder = async (
       })
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      let errorMessage = 'Failed to create Razorpay order';
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
-      } catch {
-        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      }
+      const errorMessage = data.message || data.error || 'Failed to create Razorpay order';
       throw new Error(errorMessage);
     }
 
-    const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error creating Razorpay order:', error);
