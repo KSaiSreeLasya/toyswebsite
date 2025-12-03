@@ -252,7 +252,7 @@ const Cart: React.FC = () => {
           </div>
 
           {!isCheckingOut ? (
-            <button 
+            <button
               onClick={() => {
                 if (!user) {
                   navigate('/login');
@@ -265,7 +265,7 @@ const Cart: React.FC = () => {
               Checkout <ArrowRight size={18} />
             </button>
           ) : (
-            <form onSubmit={handlePayment} className="space-y-4 animate-in slide-in-from-bottom-4">
+            <form onSubmit={handleRazorpayPayment} className="space-y-4 animate-in slide-in-from-bottom-4">
               
               {/* Shipping Details Section */}
               <div className="border-t-2 border-gray-100 pt-4 mt-4">
