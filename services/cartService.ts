@@ -13,7 +13,7 @@ export const addToCartDatabase = async (userId: string, product: CartItem): Prom
       return true;
     }
 
-    if (!isValidUUID(userId)) {
+    if (!userId || !isValidUUID(userId)) {
       console.warn('Invalid user ID format, skipping cart sync:', userId);
       return true;
     }
