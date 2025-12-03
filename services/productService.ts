@@ -23,13 +23,13 @@ export const syncProductsToDatabase = async (products: Product[]): Promise<boole
         }, { onConflict: 'id' });
 
       if (error) {
-        console.error(`Error syncing product ${product.id}:`, error);
+        console.error(`Error syncing product ${product.id}: ${error?.message || JSON.stringify(error)}`);
         return false;
       }
     }
     return true;
   } catch (err) {
-    console.error('Error syncing products:', err);
+    console.error(`Error syncing products: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return false;
   }
 };
@@ -47,7 +47,7 @@ export const getProductsFromDatabase = async (): Promise<Product[]> => {
       .order('name');
 
     if (error) {
-      console.error('Error fetching products:', error);
+      console.error(`Error fetching products: ${error?.message || JSON.stringify(error)}`);
       return [];
     }
 
@@ -62,7 +62,7 @@ export const getProductsFromDatabase = async (): Promise<Product[]> => {
       stock: p.stock
     }));
   } catch (err) {
-    console.error('Error getting products from database:', err);
+    console.error(`Error getting products from database: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return [];
   }
 };
@@ -80,12 +80,12 @@ export const updateProductStock = async (productId: string, newStock: number): P
       .eq('id', productId);
 
     if (error) {
-      console.error('Error updating product stock:', error);
+      console.error(`Error updating product stock: ${error?.message || JSON.stringify(error)}`);
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Error updating stock:', err);
+    console.error(`Error updating stock: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
     return false;
   }
 };
