@@ -13,9 +13,13 @@ export const generateProductDescription = async (productName: string, category: 
     });
 
     if (!response.ok) {
-      const error = await response.json();
-      console.error('API Error:', error);
-      return error.error || 'Could not generate description at this time.';
+      try {
+        const error = await response.json();
+        console.error('API Error:', error);
+        return error.error || 'Could not generate description at this time.';
+      } catch {
+        return 'Could not generate description at this time.';
+      }
     }
 
     const data = await response.json();
