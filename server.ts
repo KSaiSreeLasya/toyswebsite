@@ -225,12 +225,12 @@ app.post('/api/verify-payment', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Missing payment verification details' });
     }
 
-    const razorpayKeySecret = process.env.VITE_RAZORPAY_KEY_SECRET;
-    if (!razorpayKeySecret) {
-      return res.status(500).json({ error: 'Razorpay Key Secret not configured' });
+    const razorpaySecretKey = process.env.VITE_RAZORPAY_SECRET_KEY;
+    if (!razorpaySecretKey) {
+      return res.status(500).json({ error: 'Razorpay Secret Key not configured' });
     }
 
-    const hmac = crypto.createHmac('sha256', razorpayKeySecret);
+    const hmac = crypto.createHmac('sha256', razorpaySecretKey);
     hmac.update(razorpay_order_id + '|' + razorpay_payment_id);
     const generated_signature = hmac.digest('hex');
 
