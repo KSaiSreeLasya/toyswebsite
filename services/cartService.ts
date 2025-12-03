@@ -44,6 +44,11 @@ export const removeFromCartDatabase = async (userId: string, productId: string):
       return true;
     }
 
+    if (!isValidUUID(userId)) {
+      console.warn('Invalid user ID format, skipping cart sync:', userId);
+      return true;
+    }
+
     const { error } = await supabase
       .from('cart_items')
       .delete()
