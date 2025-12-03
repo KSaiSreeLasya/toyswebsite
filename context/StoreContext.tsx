@@ -389,8 +389,18 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         const newWishlist = currentWishlist.includes(productId)
             ? currentWishlist.filter(id => id !== productId)
             : [...currentWishlist, productId];
-        
+
         return { ...prev, wishlist: newWishlist };
+    });
+  };
+
+  const updateUserCoins = (coinDelta: number) => {
+    if (!user) return;
+    setUser(prev => {
+        if (!prev) return null;
+        const currentCoins = prev.coinBalance || 74;
+        const newBalance = Math.max(0, currentCoins + coinDelta);
+        return { ...prev, coinBalance: newBalance };
     });
   };
 
