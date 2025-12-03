@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import cors from 'cors';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -180,12 +181,85 @@ app.post('/api/setup-admin', async (req: Request, res: Response) => {
   }
 });
 
+app.post('/api/create-order', async (req: Request, res: Response) => {
+  try {
+    const { amount, currency, receipt, notes } = req.body;
+
+    if (!amount || !currency || !receipt) {
+      return res.status(400).json({ error: 'Missing amount, currency, or receipt' });
+    }
+
+    const razorpayKeySecret = process.env.VITE_RAZORPAY_KEY_SECRET;
+    if (!razorpayKeySecret) {
+      return res.status(500).json({ error: 'Razorpay Key Secret not configured' });
+    }
+
+    const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    const orderData = {
+      id: orderId,
+      entity: 'order',
+      amount,
+      amount_paid: 0,
+      amount_due: amount,
+      currency,
+      receipt,
+      status: 'created',
+      attempts: 0,
+      notes: notes || {},
+      created_at: Math.floor(Date.now() / 1000)
+    };
+
+    res.json(orderData);
+  } catch (error) {
+    console.error('Create Order Error:', error);
+    res.status(500).json({ error: 'Failed to create order' });
+  }
+});
+
+app.post('/api/verify-payment', async (req: Request, res: Response) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return res.status(400).json({ error: 'Missing payment verification details' });
+    }
+
+    const razorpayKeySecret = process.env.VITE_RAZORPAY_KEY_SECRET;
+    if (!razorpayKeySecret) {
+      return res.status(500).json({ error: 'Razorpay Key Secret not configured' });
+    }
+
+    const hmac = crypto.createHmac('sha256', razorpayKeySecret);
+    hmac.update(razorpay_order_id + '|' + razorpay_payment_id);
+    const generated_signature = hmac.digest('hex');
+
+    if (generated_signature === razorpay_signature) {
+      res.json({
+        success: true,
+        message: 'Payment verified successfully',
+        orderId: razorpay_order_id,
+        paymentId: razorpay_payment_id
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        error: 'Payment verification failed'
+      });
+    }
+  } catch (error) {
+    console.error('Verify Payment Error:', error);
+    res.status(500).json({ error: 'Failed to verify payment' });
+  }
+});
+
 app.get('/api/health', (req: Request, res: Response) => {
   res.json({
     status: 'ok',
     apiKeyConfigured: !!apiKey,
     supabaseConfigured: !!supabaseAdmin,
-    message: supabaseAdmin ? 'API is ready with Supabase' : 'API Key or Supabase not configured'
+    razorpayConfigured: !!process.env.VITE_RAZORPAY_KEY_SECRET,
+    message: 'API is ready with Razorpay integration'
   });
 });
 
