@@ -258,7 +258,7 @@ app.get('/api/health', (req: Request, res: Response) => {
     status: 'ok',
     apiKeyConfigured: !!apiKey,
     supabaseConfigured: !!supabaseAdmin,
-    razorpayConfigured: !!process.env.VITE_RAZORPAY_KEY_SECRET,
+    razorpayConfigured: !!(process.env.VITE_RAZORPAY_KEY_ID && process.env.VITE_RAZORPAY_SECRET_KEY),
     message: 'API is ready with Razorpay integration'
   });
 });
