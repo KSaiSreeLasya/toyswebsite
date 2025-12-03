@@ -132,13 +132,14 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
       return { success: false, error: 'Invalid email or password.' };
     }
 
-    console.log('Auth successful, user ID:', authData.user.id);
+    const authUserId = authData.user.id;
+    console.log('Auth successful, user ID:', authUserId);
 
     // Get user record from users table
     const { data: user, error: selectError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', authData.user.id)
+      .eq('id', authUserId)
       .single();
 
     // If user record doesn't exist, create it
@@ -147,7 +148,7 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
       const { data: newUser, error: insertError } = await supabase
         .from('users')
         .insert({
-          id: authData.user.id,
+          id: authUserId,
           email: emailLower,
           role: roleLower,
           name: emailLower.split('@')[0],
@@ -161,7 +162,7 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
       }
 
       console.log('Sign in successful');
-      return { success: true, user: newUser };
+      return { success: true, user: { ...newUser, id: authUserId } };
     }
 
     if (selectError && user === null) {
@@ -170,7 +171,7 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     }
 
     console.log('Sign in successful');
-    return { success: true, user };
+    return { success: true, user: { ...user, id: authUserId } };
   } catch (err) {
     console.error('Unexpected sign in error:', err);
     return { success: false, error: 'Login failed. Please try again.' };
