@@ -4,6 +4,8 @@ import { CartItem, Order } from '../types';
 export const createOrderInDatabase = async (userId: string, items: CartItem[], total: number): Promise<Order | null> => {
   try {
     const orderId = `ORD-${Date.now()}`;
+    const coinsEarned = Math.floor(total / 100);
+    const discount = Math.floor(total * 0.01);
 
     if (!isSupabaseEnabled) {
       console.log('Supabase not configured, creating local order only');
@@ -13,7 +15,9 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
         items,
         total,
         date: new Date().toISOString(),
-        status: 'pending'
+        status: 'pending',
+        coinsEarned,
+        discount
       };
       return order;
     }
@@ -54,7 +58,9 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
       items,
       total,
       date: new Date().toISOString(),
-      status: 'pending'
+      status: 'pending',
+      coinsEarned,
+      discount
     };
 
     return order;
@@ -94,31 +100,39 @@ export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> =>
       return [];
     }
 
-    return (data || []).map((order: any) => ({
-      id: order.id,
-      userId: order.user_id,
-      items: order.order_items.map((item: any) => ({
-        id: item.product_id,
-        name: item.product_name,
-        quantity: item.quantity,
-        price: item.unit_price,
-        description: '',
-        category: '',
-        imageUrl: '',
-        rating: 0,
-        stock: 0
-      })),
-      total: order.total_amount,
-      date: order.created_at,
-      status: order.status
-    }));
+    return (data || []).map((order: any) => {
+      const total = order.total_amount;
+      const coinsEarned = Math.floor(total / 100);
+      const discount = Math.floor(total * 0.01);
+
+      return {
+        id: order.id,
+        userId: order.user_id,
+        items: order.order_items.map((item: any) => ({
+          id: item.product_id,
+          name: item.product_name,
+          quantity: item.quantity,
+          price: item.unit_price,
+          description: '',
+          category: '',
+          imageUrl: '',
+          rating: 0,
+          stock: 0
+        })),
+        total: order.total_amount,
+        date: order.created_at,
+        status: order.status,
+        coinsEarned,
+        discount
+      };
+    });
   } catch (err) {
     console.error('Error in getOrdersFromDatabase:', err);
     return [];
   }
 };
 
-export const updateOrderStatus = async (orderId: string, status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled'): Promise<boolean> => {
+export const updateOrderStatus = async (orderId: string, status: 'pending' | 'packed' | 'shipped' | 'delivered' | 'cancelled'): Promise<boolean> => {
   try {
     if (!isSupabaseEnabled) {
       console.log('Supabase not configured, skipping order status update');

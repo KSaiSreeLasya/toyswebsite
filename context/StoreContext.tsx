@@ -29,6 +29,7 @@ interface StoreContextType {
   addTeamMember: (member: User) => void;
   removeTeamMember: (id: string) => void;
   toggleWishlist: (productId: string) => void;
+  updateUserCoins: (coinDelta: number) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   setShippingPolicy: (policy: string) => void;
@@ -208,13 +209,23 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           }
       }
 
+      const storedUserStr2 = localStorage.getItem('wl_user');
+      let previousCoinBalance = 74;
+      if (storedUserStr2) {
+          const stored = JSON.parse(storedUserStr2);
+          if (stored.email === email) {
+              previousCoinBalance = stored.coinBalance || 74;
+          }
+      }
+
       const newUser: User = existingTeamMember || {
         id: result.user?.id || Date.now().toString(),
         name: result.user?.name || email.split('@')[0],
         email,
         role,
         permissions,
-        wishlist: previousWishlist
+        wishlist: previousWishlist,
+        coinBalance: previousCoinBalance
       };
 
       setUser(newUser);
@@ -378,8 +389,18 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         const newWishlist = currentWishlist.includes(productId)
             ? currentWishlist.filter(id => id !== productId)
             : [...currentWishlist, productId];
-        
+
         return { ...prev, wishlist: newWishlist };
+    });
+  };
+
+  const updateUserCoins = (coinDelta: number) => {
+    if (!user) return;
+    setUser(prev => {
+        if (!prev) return null;
+        const currentCoins = prev.coinBalance || 74;
+        const newBalance = Math.max(0, currentCoins + coinDelta);
+        return { ...prev, coinBalance: newBalance };
     });
   };
 
@@ -387,12 +408,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setPaymentConfig(config);
   };
 
-  const placeOrder = async () => {
+  const placeOrder = async (coinsUsed: number = 0) => {
     if (!user) {
       throw new Error('User not logged in');
     }
 
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const tax = subtotal * 0.18;
+    const total = Math.max(0, subtotal + tax - coinsUsed);
 
     // Create order in Supabase or locally
     const newOrder = await createOrderInDatabase(user.id, cart, total);
@@ -415,6 +438,11 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           return p;
       }));
 
+      // Update user coins: deduct used coins and add earned coins
+      const coinsEarned = newOrder.coinsEarned || 0;
+      const netCoinChange = coinsEarned - coinsUsed;
+      updateUserCoins(netCoinChange);
+
       clearCart();
       return newOrder;
     } else {
@@ -427,7 +455,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       user, products, cart, orders, teamMembers, login, signup, logout,
       addToCart, removeFromCart, updateCartQuantity, clearCart,
       addProduct, updateProduct, deleteProduct, placeOrder, addTeamMember, removeTeamMember,
-      toggleWishlist,
+      toggleWishlist, updateUserCoins,
       searchQuery, setSearchQuery,
       shippingPolicy, setShippingPolicy,
       returnsPolicy, setReturnsPolicy,

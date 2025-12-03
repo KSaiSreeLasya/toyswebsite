@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
-import { Trash2, Plus, Minus, CreditCard, CheckCircle, ArrowRight, Loader2, MapPin, Phone } from 'lucide-react';
+import { Trash2, Plus, Minus, CreditCard, CheckCircle, ArrowRight, Loader2, MapPin, Phone, Copy } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { createRazorpayOrder, openRazorpayCheckout, getTestCards } from '../services/razorpayService';
 
 const Cart: React.FC = () => {
   const { cart, removeFromCart, updateCartQuantity, placeOrder, user } = useStore();
@@ -10,27 +11,79 @@ const Cart: React.FC = () => {
   const [orderComplete, setOrderComplete] = useState(false);
   const [useCoins, setUseCoins] = useState(false);
   const [coinsUsed, setCoinsUsed] = useState(0);
+  const [showTestCards, setShowTestCards] = useState(false);
+  const [shippingData, setShippingData] = useState({
+    fullName: '',
+    address: '',
+    city: '',
+    zipCode: '',
+    phone: ''
+  });
   const navigate = useNavigate();
 
-  const availableCoins = 74;
+  const availableCoins = user?.coinBalance || 74;
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const tax = subtotal * 0.18; // GST roughly 18% in India for some toys
+  const tax = subtotal * 0.18;
   const coinDiscount = useCoins ? coinsUsed : 0;
   const total = Math.max(0, subtotal + tax - coinDiscount);
 
-  const handlePayment = async (e: React.FormEvent) => {
+  const handleRazorpayPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!shippingData.fullName || !shippingData.address || !shippingData.city || !shippingData.zipCode || !shippingData.phone) {
+      alert('Please fill in all shipping details');
+      return;
+    }
+
     setIsProcessing(true);
     try {
-      await placeOrder();
-      // Simulate processing animation delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+      if (!keyId) {
+        throw new Error('Razorpay Key ID not configured');
+      }
+
+      const order = await createRazorpayOrder(
+        total,
+        `ORD-${Date.now()}`,
+        {
+          userId: user?.id,
+          items: cart.length,
+          shippingAddress: shippingData
+        }
+      );
+
+      const options = {
+        key: keyId,
+        amount: Math.round(total * 100),
+        currency: 'INR',
+        name: 'WonderLand Toys',
+        description: `Order for ${cart.length} items`,
+        order_id: order.id,
+        prefill: {
+          name: shippingData.fullName,
+          contact: shippingData.phone,
+          email: user?.email
+        },
+        notes: {
+          shippingAddress: shippingData.address,
+          city: shippingData.city,
+          zipCode: shippingData.zipCode,
+          coinsUsed: useCoins ? coinsUsed : 0
+        }
+      };
+
+      const razorpayResponse = await openRazorpayCheckout(options);
+
+      await placeOrder(useCoins ? coinsUsed : 0);
+
       setIsProcessing(false);
       setOrderComplete(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment error:', error);
       setIsProcessing(false);
-      alert('Error placing order. Please try again.');
+      const errorMessage = error?.message || (typeof error === 'string' ? error : 'Payment failed. Please try again.');
+      alert(errorMessage);
     }
   };
 
@@ -200,7 +253,7 @@ const Cart: React.FC = () => {
           </div>
 
           {!isCheckingOut ? (
-            <button 
+            <button
               onClick={() => {
                 if (!user) {
                   navigate('/login');
@@ -213,7 +266,7 @@ const Cart: React.FC = () => {
               Checkout <ArrowRight size={18} />
             </button>
           ) : (
-            <form onSubmit={handlePayment} className="space-y-4 animate-in slide-in-from-bottom-4">
+            <form onSubmit={handleRazorpayPayment} className="space-y-4 animate-in slide-in-from-bottom-4">
               
               {/* Shipping Details Section */}
               <div className="border-t-2 border-gray-100 pt-4 mt-4">
@@ -221,17 +274,48 @@ const Cart: React.FC = () => {
                   <MapPin size={18} className="text-secondary-500" /> Shipping Details
                 </h4>
                 <div className="space-y-3">
-                  <input required placeholder="Full Name" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
-                  <input required placeholder="Address Line 1" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                  <input
+                    required
+                    placeholder="Full Name"
+                    value={shippingData.fullName}
+                    onChange={(e) => setShippingData({...shippingData, fullName: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all"
+                  />
+                  <input
+                    required
+                    placeholder="Address Line 1"
+                    value={shippingData.address}
+                    onChange={(e) => setShippingData({...shippingData, address: e.target.value})}
+                    className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all"
+                  />
                   <div className="grid grid-cols-2 gap-3">
-                     <input required placeholder="City" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
-                     <input required placeholder="ZIP Code" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                     <input
+                       required
+                       placeholder="City"
+                       value={shippingData.city}
+                       onChange={(e) => setShippingData({...shippingData, city: e.target.value})}
+                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all"
+                     />
+                     <input
+                       required
+                       placeholder="ZIP Code"
+                       value={shippingData.zipCode}
+                       onChange={(e) => setShippingData({...shippingData, zipCode: e.target.value})}
+                       className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all"
+                     />
                   </div>
                   <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                         <Phone size={14} className="text-gray-400" />
                       </div>
-                      <input required type="tel" placeholder="Phone Number" className="w-full border-2 border-gray-200 rounded-xl pl-9 px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+                      <input
+                        required
+                        type="tel"
+                        placeholder="Phone Number"
+                        value={shippingData.phone}
+                        onChange={(e) => setShippingData({...shippingData, phone: e.target.value})}
+                        className="w-full border-2 border-gray-200 rounded-xl pl-9 px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all"
+                      />
                   </div>
                 </div>
               </div>
@@ -239,25 +323,57 @@ const Cart: React.FC = () => {
               {/* Payment Section */}
               <div className="border-t-2 border-gray-100 pt-4 mt-4">
                 <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
-                  <CreditCard size={18} className="text-secondary-500" /> Payment Details
+                  <CreditCard size={18} className="text-secondary-500" /> Payment Method
                 </h4>
-                
-                <div className="space-y-3">
-                  <input required placeholder="Card Number" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <input required placeholder="MM/YY" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
-                    <input required placeholder="CVC" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
-                  </div>
-                  <input required placeholder="Cardholder Name" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-3 mb-3">
+                  <p className="text-sm text-gray-700 font-medium mb-2">✅ Razorpay Payment Gateway (Test Mode)</p>
+                  <p className="text-xs text-gray-600 mb-3">Click "Pay" below to open the Razorpay payment modal. Use test cards to complete payment.</p>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowTestCards(!showTestCards)}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 mb-2"
+                  >
+                    {showTestCards ? '▼' : '▶'} Show Test Cards
+                  </button>
+
+                  {showTestCards && (
+                    <div className="space-y-2 mt-2 bg-white p-2 rounded-lg">
+                      <p className="text-xs font-bold text-gray-700 mb-2">Success Test Cards:</p>
+                      {getTestCards().success.map((card, idx) => (
+                        <div key={idx} className="bg-gray-50 p-2 rounded text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="font-mono font-bold">{card.number}</p>
+                              <p className="text-gray-600">{card.description}</p>
+                              <p className="text-gray-500">Exp: {card.expiry} | CVV: {card.cvv}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(card.number.replace(/\s/g, ''));
+                                alert('Card number copied!');
+                              }}
+                              className="p-1 hover:bg-gray-200 rounded"
+                              title="Copy card number"
+                            >
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="flex gap-3 mt-6">
-                 <button 
+                 <button
                   type="button"
                   onClick={() => setIsCheckingOut(false)}
                   disabled={isProcessing}
-                  className="flex-1 bg-gray-100 text-gray-700 font-bold py-2 rounded-xl hover:bg-gray-200 transition-colors border-2 border-transparent hover:border-gray-300"
+                  className="flex-1 bg-gray-100 text-gray-700 font-bold py-2 rounded-xl hover:bg-gray-200 transition-colors border-2 border-transparent hover:border-gray-300 disabled:opacity-50"
                 >
                   Back
                 </button>
@@ -269,11 +385,11 @@ const Cart: React.FC = () => {
                   {isProcessing ? (
                     <div className="flex items-center gap-2">
                       <Loader2 size={18} className="animate-spin" />
-                      <span>Processing...</span>
+                      <span>Opening Razorpay...</span>
                     </div>
                   ) : (
                     <>
-                      <span>Pay ₹{total.toFixed(2)}</span>
+                      <span>Pay ₹{total.toFixed(2)} with Razorpay</span>
                       {coinDiscount > 0 && <span className="text-xs text-green-100">You saved ₹{coinDiscount.toFixed(2)} with coins!</span>}
                     </>
                   )}
