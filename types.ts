@@ -12,6 +12,7 @@ export interface User {
   role: UserRole;
   permissions?: AdminPermission[];
   wishlist?: string[];
+  coinBalance?: number;
 }
 
 export interface Product {
