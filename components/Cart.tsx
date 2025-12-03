@@ -322,16 +322,48 @@ const Cart: React.FC = () => {
               {/* Payment Section */}
               <div className="border-t-2 border-gray-100 pt-4 mt-4">
                 <h4 className="font-bold text-gray-700 mb-3 flex items-center gap-2">
-                  <CreditCard size={18} className="text-secondary-500" /> Payment Details
+                  <CreditCard size={18} className="text-secondary-500" /> Payment Method
                 </h4>
-                
-                <div className="space-y-3">
-                  <input required placeholder="Card Number" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
-                  <div className="grid grid-cols-2 gap-3">
-                    <input required placeholder="MM/YY" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
-                    <input required placeholder="CVC" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
-                  </div>
-                  <input required placeholder="Cardholder Name" className="w-full border-2 border-gray-200 rounded-xl px-4 py-2 text-sm focus:ring-4 focus:ring-secondary-100 focus:border-secondary-400 outline-none transition-all" />
+
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-3 mb-3">
+                  <p className="text-sm text-gray-700 font-medium mb-2">✅ Razorpay Payment Gateway (Test Mode)</p>
+                  <p className="text-xs text-gray-600 mb-3">Click "Pay" below to open the Razorpay payment modal. Use test cards to complete payment.</p>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowTestCards(!showTestCards)}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1 mb-2"
+                  >
+                    {showTestCards ? '▼' : '▶'} Show Test Cards
+                  </button>
+
+                  {showTestCards && (
+                    <div className="space-y-2 mt-2 bg-white p-2 rounded-lg">
+                      <p className="text-xs font-bold text-gray-700 mb-2">Success Test Cards:</p>
+                      {getTestCards().success.map((card, idx) => (
+                        <div key={idx} className="bg-gray-50 p-2 rounded text-xs">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="font-mono font-bold">{card.number}</p>
+                              <p className="text-gray-600">{card.description}</p>
+                              <p className="text-gray-500">Exp: {card.expiry} | CVV: {card.cvv}</p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(card.number.replace(/\s/g, ''));
+                                alert('Card number copied!');
+                              }}
+                              className="p-1 hover:bg-gray-200 rounded"
+                              title="Copy card number"
+                            >
+                              <Copy size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
 
