@@ -11,27 +11,78 @@ const Cart: React.FC = () => {
   const [orderComplete, setOrderComplete] = useState(false);
   const [useCoins, setUseCoins] = useState(false);
   const [coinsUsed, setCoinsUsed] = useState(0);
+  const [showTestCards, setShowTestCards] = useState(false);
+  const [shippingData, setShippingData] = useState({
+    fullName: '',
+    address: '',
+    city: '',
+    zipCode: '',
+    phone: ''
+  });
   const navigate = useNavigate();
 
   const availableCoins = user?.coinBalance || 74;
   const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const tax = subtotal * 0.18; // GST roughly 18% in India for some toys
+  const tax = subtotal * 0.18;
   const coinDiscount = useCoins ? coinsUsed : 0;
   const total = Math.max(0, subtotal + tax - coinDiscount);
 
-  const handlePayment = async (e: React.FormEvent) => {
+  const handleRazorpayPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!shippingData.fullName || !shippingData.address || !shippingData.city || !shippingData.zipCode || !shippingData.phone) {
+      alert('Please fill in all shipping details');
+      return;
+    }
+
     setIsProcessing(true);
     try {
+      const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
+
+      if (!keyId) {
+        throw new Error('Razorpay Key ID not configured');
+      }
+
+      const order = await createRazorpayOrder(
+        total,
+        `ORD-${Date.now()}`,
+        {
+          userId: user?.id,
+          items: cart.length,
+          shippingAddress: shippingData
+        }
+      );
+
+      const options = {
+        key: keyId,
+        amount: Math.round(total * 100),
+        currency: 'INR',
+        name: 'WonderLand Toys',
+        description: `Order for ${cart.length} items`,
+        order_id: order.id,
+        prefill: {
+          name: shippingData.fullName,
+          contact: shippingData.phone,
+          email: user?.email
+        },
+        notes: {
+          shippingAddress: shippingData.address,
+          city: shippingData.city,
+          zipCode: shippingData.zipCode,
+          coinsUsed: useCoins ? coinsUsed : 0
+        }
+      };
+
+      const razorpayResponse = await openRazorpayCheckout(options);
+
       await placeOrder(useCoins ? coinsUsed : 0);
-      // Simulate processing animation delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+
       setIsProcessing(false);
       setOrderComplete(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Payment error:', error);
       setIsProcessing(false);
-      alert('Error placing order. Please try again.');
+      alert(error.message || 'Payment failed. Please try again.');
     }
   };
 
