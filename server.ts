@@ -189,9 +189,9 @@ app.post('/api/create-order', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Missing amount, currency, or receipt' });
     }
 
-    const razorpayKeySecret = process.env.VITE_RAZORPAY_KEY_SECRET;
-    if (!razorpayKeySecret) {
-      return res.status(500).json({ error: 'Razorpay Key Secret not configured' });
+    const razorpaySecretKey = process.env.VITE_RAZORPAY_SECRET_KEY;
+    if (!razorpaySecretKey) {
+      return res.status(500).json({ error: 'Razorpay Secret Key not configured' });
     }
 
     const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
