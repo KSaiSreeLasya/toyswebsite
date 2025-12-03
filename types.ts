@@ -1,4 +1,3 @@
-
 export enum UserRole {
   ADMIN = 'ADMIN',
   CUSTOMER = 'CUSTOMER'
@@ -36,7 +35,9 @@ export interface Order {
   items: CartItem[];
   total: number;
   date: string;
-  status: 'pending' | 'shipped' | 'delivered';
+  status: 'pending' | 'packed' | 'shipped' | 'delivered';
+  discount?: number;
+  coinsEarned?: number;
 }
 
 export interface SalesData {
