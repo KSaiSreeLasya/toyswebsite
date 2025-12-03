@@ -25,7 +25,7 @@ export const createRazorpayOrder = async (
 ): Promise<RazorpayOrderResponse> => {
   try {
     const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
-    
+
     if (!keyId) {
       throw new Error('Razorpay Key ID not configured');
     }
@@ -43,17 +43,17 @@ export const createRazorpayOrder = async (
       })
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Failed to create Razorpay order');
+      throw new Error(data.message || data.error || 'Failed to create Razorpay order');
     }
 
-    const data = await response.json();
     return data;
   } catch (error) {
     console.error('Error creating Razorpay order:', error);
-    
-    return {
+
+    const mockOrder: RazorpayOrderResponse = {
       id: `order_${Date.now()}`,
       entity: 'order',
       amount: Math.round(amount * 100),
@@ -66,6 +66,7 @@ export const createRazorpayOrder = async (
       notes: notes || {},
       created_at: Math.floor(Date.now() / 1000)
     };
+    return mockOrder;
   }
 };
 
