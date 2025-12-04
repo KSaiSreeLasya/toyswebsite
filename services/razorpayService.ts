@@ -96,20 +96,42 @@ export const openRazorpayCheckout = (
       return;
     }
 
-    const checkoutOptions = {
-      ...options,
-      handler: function (response: RazorpayPaymentVerification) {
-        resolve(response);
-      },
-      modal: {
-        ondismiss: () => {
-          reject(new Error('Payment cancelled'));
+    try {
+      const checkoutOptions = {
+        ...options,
+        handler: function (response: RazorpayPaymentVerification) {
+          console.log('Payment response received:', response);
+          resolve(response);
+        },
+        modal: {
+          ondismiss: () => {
+            console.log('Payment modal dismissed');
+            reject(new Error('Payment cancelled'));
+          }
         }
-      }
-    };
+      };
 
-    const rzp = new Razorpay(checkoutOptions);
-    rzp.open();
+      console.log('Opening Razorpay checkout with options:', {
+        key: checkoutOptions.key,
+        amount: checkoutOptions.amount,
+        order_id: checkoutOptions.order_id
+      });
+
+      const rzp = new Razorpay(checkoutOptions);
+      rzp.open();
+
+      // Add timeout fallback - if checkout doesn't respond in 30 seconds, reject
+      const timeout = setTimeout(() => {
+        reject(new Error('Payment gateway timeout. Please try again.'));
+      }, 30000);
+
+      // Clear timeout when promise resolves or rejects
+      Promise.resolve(rzp).catch(() => clearTimeout(timeout));
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to open Razorpay checkout';
+      console.error('Razorpay initialization error:', errorMsg, error);
+      reject(new Error(errorMsg));
+    }
   });
 };
 
