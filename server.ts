@@ -10,6 +10,12 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Add Permissions-Policy header for payment gateway APIs
+app.use((req: Request, res: Response, next: Function) => {
+  res.setHeader('Permissions-Policy', 'payment=*, publickey-credentials-get=*, clipboard-write=*, web-share=*, otp-credentials=*, publickey-credentials-create=*');
+  next();
+});
+
 const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
