@@ -60,13 +60,6 @@ const distPath = path.join(__dirname, 'dist');
 // Serve static files from dist
 app.use(express.static(distPath));
 
-// SPA fallback: serve index.html for all non-API routes
-app.get('*', (req: Request, res: Response) => {
-  if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(distPath, 'index.html'));
-  }
-});
-
 const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
