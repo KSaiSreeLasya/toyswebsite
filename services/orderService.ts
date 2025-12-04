@@ -57,7 +57,7 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
       id: orderId,
       userId,
       items,
-      total,
+      total: Math.round(totalInRupees * 100) / 100,
       date: new Date().toISOString(),
       status: 'pending',
       coinsEarned,
