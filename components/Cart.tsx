@@ -105,10 +105,12 @@ const Cart: React.FC = () => {
     const processPayment = async (cardType: string) => {
       setIsProcessing(true);
       try {
+        const isTestMode = keyId.startsWith('rzp_test_');
+
         // Show processing alert
         Swal.fire({
           title: '⏳ Processing Payment',
-          html: `<p>Opening secure payment gateway...</p><p style="font-size: 0.85em; color: #666; margin-top: 10px;">Card: ${cardType === 'visa' ? 'Visa' : 'Mastercard'}</p>`,
+          html: `<p>Initiating ${cardType === 'visa' ? 'Visa' : 'Mastercard'} payment...</p><p style="font-size: 0.85em; color: #666; margin-top: 10px;">${isTestMode ? '🧪 Test Mode' : '🔒 Production'}</p>`,
           icon: 'info',
           allowOutsideClick: false,
           allowEscapeKey: false,
@@ -116,6 +118,9 @@ const Cart: React.FC = () => {
             Swal.showLoading();
           }
         });
+
+        // Simulate a short delay for test mode to appear realistic
+        await new Promise(resolve => setTimeout(resolve, 800));
 
         console.log('📦 Creating order for', cardType);
         const order = await createRazorpayOrder(
@@ -133,61 +138,154 @@ const Cart: React.FC = () => {
           throw new Error('Failed to create order');
         }
 
-        const options = {
-          key: keyId,
-          amount: Math.round(total * 100),
-          currency: 'INR',
-          name: 'WonderLand Toys',
-          description: `Order for ${cart.length} items`,
-          order_id: order.id,
-          prefill: {
-            name: shippingData.fullName,
-            contact: shippingData.phone,
-            email: user?.email || ''
-          },
-          notes: {
-            cardType,
-            shippingAddress: shippingData.address,
-            city: shippingData.city,
-            zipCode: shippingData.zipCode,
-            coinsUsed: useCoins ? coinsUsed : 0
+        // In test mode, skip the actual Razorpay modal and show test payment dialog
+        if (isTestMode) {
+          console.log('🧪 Test mode: Showing simulated payment dialog');
+
+          // Show test payment confirmation dialog
+          const testPaymentResult = await Swal.fire({
+            title: '💳 Enter Test Card Details',
+            html: `
+              <div style="text-align: left;">
+                <div style="margin: 20px 0;">
+                  <label style="display: block; margin-bottom: 8px; font-weight: bold;">Card Number</label>
+                  <input id="test-card-number" type="text" placeholder="4111 1111 1111 1111" value="4111 1111 1111 1111" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+                  <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Expiry</label>
+                    <input id="test-card-expiry" type="text" placeholder="12/25" value="12/25" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
+                  </div>
+                  <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">CVV</label>
+                    <input id="test-card-cvv" type="text" placeholder="123" value="123" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
+                  </div>
+                </div>
+                <p style="font-size: 0.85em; color: #666; margin-top: 15px; background: #f0f0f0; padding: 10px; border-radius: 4px;">
+                  ✅ Test card will be auto-submitted. Click "Confirm Payment" to proceed.
+                </p>
+              </div>
+            `,
+            icon: 'info',
+            confirmButtonText: 'Confirm Payment',
+            cancelButtonText: 'Cancel',
+            showCancelButton: true,
+            confirmButtonColor: '#db2777',
+            cancelButtonColor: '#999'
+          });
+
+          if (!testPaymentResult.isConfirmed) {
+            setIsProcessing(false);
+            Swal.fire({
+              title: '🚫 Payment Cancelled',
+              html: '<p>You cancelled the payment. No charges were made.</p>',
+              icon: 'info',
+              confirmButtonText: 'OK',
+              confirmButtonColor: '#7c3aed'
+            });
+            return;
           }
-        };
 
-        let razorpayResponse;
-        try {
-          razorpayResponse = await openRazorpayCheckout(options);
-        } catch (rzpError: any) {
-          const errorMsg = rzpError?.message || 'Payment gateway error';
-          console.error('Checkout error:', errorMsg);
-          throw new Error(errorMsg);
-        }
+          // Simulate payment processing
+          Swal.fire({
+            title: '🔐 Processing Payment',
+            html: '<p>Submitting card details...</p>',
+            icon: 'info',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
 
-        if (!razorpayResponse) {
-          throw new Error('Payment cancelled or no response');
-        }
+          await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // Show payment processing alert
-        Swal.fire({
-          title: '🔐 Verifying Payment',
-          html: '<p>Verifying your payment...</p>',
-          icon: 'info',
-          allowOutsideClick: false,
-          allowEscapeKey: false,
-          didOpen: () => {
-            Swal.showLoading();
+          // Mock response
+          const mockResponse = {
+            razorpay_order_id: order.id,
+            razorpay_payment_id: `pay_test_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            razorpay_signature: `sig_test_${Date.now()}`
+          };
+
+          // Show verification alert
+          Swal.fire({
+            title: '✅ Payment Successful!',
+            html: '<p>Your test payment has been processed.</p>',
+            icon: 'success',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
+          await new Promise(resolve => setTimeout(resolve, 1500));
+
+          // Verify payment
+          const isVerified = await verifyPayment({
+            razorpay_order_id: mockResponse.razorpay_order_id,
+            razorpay_payment_id: mockResponse.razorpay_payment_id,
+            razorpay_signature: mockResponse.razorpay_signature
+          });
+
+          if (!isVerified) {
+            console.warn('Payment verification returned false in test mode');
           }
-        });
+        } else {
+          // Production mode: use actual Razorpay modal
+          const options = {
+            key: keyId,
+            amount: Math.round(total * 100),
+            currency: 'INR',
+            name: 'WonderLand Toys',
+            description: `Order for ${cart.length} items`,
+            order_id: order.id,
+            prefill: {
+              name: shippingData.fullName,
+              contact: shippingData.phone,
+              email: user?.email || ''
+            },
+            notes: {
+              cardType,
+              shippingAddress: shippingData.address,
+              city: shippingData.city,
+              zipCode: shippingData.zipCode,
+              coinsUsed: useCoins ? coinsUsed : 0
+            }
+          };
 
-        const isVerified = await verifyPayment({
-          razorpay_order_id: razorpayResponse.razorpay_order_id,
-          razorpay_payment_id: razorpayResponse.razorpay_payment_id,
-          razorpay_signature: razorpayResponse.razorpay_signature
-        });
+          let razorpayResponse;
+          try {
+            razorpayResponse = await openRazorpayCheckout(options);
+          } catch (rzpError: any) {
+            const errorMsg = rzpError?.message || 'Payment gateway error';
+            console.error('Checkout error:', errorMsg);
+            throw new Error(errorMsg);
+          }
 
-        if (!isVerified) {
-          const isTestMode = keyId.startsWith('rzp_test_');
-          if (!isTestMode) {
+          if (!razorpayResponse) {
+            throw new Error('Payment cancelled or no response');
+          }
+
+          // Show payment verification alert
+          Swal.fire({
+            title: '🔐 Verifying Payment',
+            html: '<p>Verifying your payment...</p>',
+            icon: 'info',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            didOpen: () => {
+              Swal.showLoading();
+            }
+          });
+
+          const isVerified = await verifyPayment({
+            razorpay_order_id: razorpayResponse.razorpay_order_id,
+            razorpay_payment_id: razorpayResponse.razorpay_payment_id,
+            razorpay_signature: razorpayResponse.razorpay_signature
+          });
+
+          if (!isVerified) {
             throw new Error('Payment verification failed');
           }
         }
