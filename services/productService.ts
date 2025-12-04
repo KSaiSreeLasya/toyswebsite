@@ -23,13 +23,14 @@ export const syncProductsToDatabase = async (products: Product[]): Promise<boole
         }, { onConflict: 'id' });
 
       if (error) {
-        console.error(`Error syncing product ${product.id}:`, error);
+        console.error(`Error syncing product ${product.id}:`, error?.message || 'Unknown error');
         return false;
       }
     }
     return true;
   } catch (err) {
-    console.error('Error syncing products:', err);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error syncing products:', errorMsg);
     return false;
   }
 };
@@ -47,7 +48,7 @@ export const getProductsFromDatabase = async (): Promise<Product[]> => {
       .order('name');
 
     if (error) {
-      console.error('Error fetching products:', error);
+      console.error('Error fetching products:', error?.message || 'Unknown error');
       return [];
     }
 
@@ -62,7 +63,8 @@ export const getProductsFromDatabase = async (): Promise<Product[]> => {
       stock: p.stock
     }));
   } catch (err) {
-    console.error('Error getting products from database:', err);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error getting products from database:', errorMsg);
     return [];
   }
 };
@@ -80,12 +82,13 @@ export const updateProductStock = async (productId: string, newStock: number): P
       .eq('id', productId);
 
     if (error) {
-      console.error('Error updating product stock:', error);
+      console.error('Error updating product stock:', error?.message || 'Unknown error');
       return false;
     }
     return true;
   } catch (err) {
-    console.error('Error updating stock:', err);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error updating stock:', errorMsg);
     return false;
   }
 };

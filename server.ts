@@ -181,6 +181,282 @@ app.post('/api/setup-admin', async (req: Request, res: Response) => {
   }
 });
 
+app.post('/api/seed-products', async (req: Request, res: Response) => {
+  try {
+    if (!supabaseAdmin) {
+      return res.status(500).json({ error: 'Supabase admin client not configured' });
+    }
+
+    const INITIAL_PRODUCTS = [
+      {
+        id: '1',
+        name: 'Galactic Explorer Lego Set',
+        description: 'Build your own spaceship and explore the outer rim! Includes 5 minifigures and moving parts.',
+        price: 7499,
+        category: 'Construction',
+        image_url: 'https://picsum.photos/400/400?random=1',
+        rating: 4.8,
+        stock: 15
+      },
+      {
+        id: '2',
+        name: 'Cuddly Bear "Barnaby"',
+        description: 'The softest hug you will ever feel. Barnaby is made from organic cotton and recycled filling.',
+        price: 1999,
+        category: 'Plush',
+        image_url: 'https://picsum.photos/400/400?random=2',
+        rating: 4.9,
+        stock: 50
+      },
+      {
+        id: '3',
+        name: 'Speedster RC Car',
+        description: 'High speed remote control car with drift capabilities and rechargeable battery.',
+        price: 3499,
+        category: 'Electronics',
+        image_url: 'https://picsum.photos/400/400?random=3',
+        rating: 4.5,
+        stock: 8
+      },
+      {
+        id: '4',
+        name: 'Magical Chemistry Set',
+        description: 'Safe and fun experiments for budding scientists. Create slime, crystals, and fizzing potions.',
+        price: 2899,
+        category: 'Educational',
+        image_url: 'https://picsum.photos/400/400?random=4',
+        rating: 4.7,
+        stock: 20
+      },
+      {
+        id: '5',
+        name: 'Fantasy Castle Playset',
+        description: 'A large folding castle with secret doors, a dungeon, and a throne room.',
+        price: 9999,
+        category: 'Playsets',
+        image_url: 'https://picsum.photos/400/400?random=5',
+        rating: 4.9,
+        stock: 5
+      },
+      {
+        id: '6',
+        name: 'Wooden Train Tracks',
+        description: 'Classic wooden tracks compatible with major brands. 50 pieces included.',
+        price: 3299,
+        category: 'Construction',
+        image_url: 'https://picsum.photos/400/400?random=6',
+        rating: 4.6,
+        stock: 30
+      },
+      {
+        id: '7',
+        name: 'Rainbow Unicorn Plush',
+        description: 'A magical plush companion with a shimmering horn and rainbow mane.',
+        price: 2499,
+        category: 'Plush',
+        image_url: 'https://picsum.photos/400/400?random=7',
+        rating: 4.9,
+        stock: 0
+      },
+      {
+        id: '8',
+        name: 'Mars Rover Kit',
+        description: 'Build a solar-powered rover that actually moves! Great for learning mechanics.',
+        price: 4599,
+        category: 'Educational',
+        image_url: 'https://picsum.photos/400/400?random=8',
+        rating: 4.7,
+        stock: 12
+      },
+      {
+        id: '9',
+        name: 'Super Hero Action Figure',
+        description: 'Fully articulated action figure with cape and accessories.',
+        price: 1299,
+        category: 'Playsets',
+        image_url: 'https://picsum.photos/400/400?random=9',
+        rating: 4.5,
+        stock: 25
+      },
+      {
+        id: '10',
+        name: 'Digital Pet Tamagotchi',
+        description: 'Raise your own digital pet. Feed it, play with it, and watch it grow.',
+        price: 1899,
+        category: 'Electronics',
+        image_url: 'https://picsum.photos/400/400?random=10',
+        rating: 4.6,
+        stock: 0
+      },
+      {
+        id: '11',
+        name: 'Mega Block City',
+        description: 'A massive set of blocks to build an entire city skyline.',
+        price: 5999,
+        category: 'Construction',
+        image_url: 'https://picsum.photos/400/400?random=11',
+        rating: 4.8,
+        stock: 18
+      },
+      {
+        id: '12',
+        name: 'Chemistry Lab Pro',
+        description: 'Advanced chemistry set with microscope and 50 experiments.',
+        price: 6499,
+        category: 'Educational',
+        image_url: 'https://picsum.photos/400/400?random=12',
+        rating: 4.9,
+        stock: 10
+      },
+      {
+        id: '13',
+        name: 'Dollhouse Dream Mansion',
+        description: 'Three-story wooden dollhouse with furniture and elevator.',
+        price: 12999,
+        category: 'Playsets',
+        image_url: 'https://picsum.photos/400/400?random=13',
+        rating: 4.9,
+        stock: 3
+      },
+      {
+        id: '14',
+        name: 'Remote Control Drone',
+        description: 'Easy-to-fly drone with HD camera and stabilization.',
+        price: 8999,
+        category: 'Electronics',
+        image_url: 'https://picsum.photos/400/400?random=14',
+        rating: 4.4,
+        stock: 15
+      },
+      {
+        id: '15',
+        name: 'Puzzle Map of the World',
+        description: '1000-piece puzzle that teaches geography while you build.',
+        price: 1499,
+        category: 'Educational',
+        image_url: 'https://picsum.photos/400/400?random=15',
+        rating: 4.7,
+        stock: 40
+      },
+      {
+        id: '16',
+        name: 'Dinosaur Excavation Kit',
+        description: 'Dig up real dinosaur bone replicas encased in clay.',
+        price: 999,
+        category: 'Educational',
+        image_url: 'https://picsum.photos/400/400?random=16',
+        rating: 4.8,
+        stock: 60
+      }
+    ];
+
+    console.log('Seeding products...');
+    const { error: upsertError } = await supabaseAdmin
+      .from('products')
+      .upsert(INITIAL_PRODUCTS, { onConflict: 'id' });
+
+    if (upsertError) {
+      console.error('Error seeding products:', upsertError.message);
+      return res.status(400).json({ error: upsertError.message || 'Failed to seed products' });
+    }
+
+    console.log('Products seeded successfully');
+    res.json({
+      success: true,
+      message: 'Products seeded successfully',
+      count: INITIAL_PRODUCTS.length
+    });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('Seed Products Error:', errorMsg);
+    res.status(500).json({ error: `Server error: ${errorMsg}` });
+  }
+});
+
+app.post('/api/signup', async (req: Request, res: Response) => {
+  try {
+    const { email, password, role = 'customer' } = req.body;
+
+    console.log('Signup request received for:', email);
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    if (!supabaseAdmin) {
+      console.error('Supabase admin not configured. URL:', !!supabaseUrl, 'Key:', !!supabaseServiceKey);
+      return res.status(500).json({ error: 'Supabase not configured. Contact server admin.' });
+    }
+
+    const emailLower = email.toLowerCase();
+    const roleLower = role.toLowerCase();
+
+    // Check if user already exists
+    console.log('Checking if user exists:', emailLower);
+    const { data: existingUsers, error: checkError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', emailLower);
+
+    if (checkError) {
+      console.error('Error checking existing user:', checkError.message);
+    }
+
+    if (existingUsers && existingUsers.length > 0) {
+      return res.status(400).json({ error: 'User with this email already exists' });
+    }
+
+    // Create auth user
+    console.log('Creating auth user for:', emailLower);
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: emailLower,
+      password,
+      email_confirm: true,
+    });
+
+    if (authError) {
+      console.error('Auth creation error:', authError.message);
+      return res.status(400).json({ error: authError.message || 'Failed to create auth user' });
+    }
+
+    if (!authData?.user) {
+      console.error('No user returned from auth creation');
+      return res.status(400).json({ error: 'Failed to create auth user' });
+    }
+
+    const authUserId = authData.user.id;
+    console.log('Auth user created:', authUserId);
+
+    // Create user profile
+    console.log('Creating user profile');
+    const { error: insertError } = await supabaseAdmin
+      .from('users')
+      .insert({
+        id: authUserId,
+        email: emailLower,
+        role: roleLower,
+        name: emailLower.split('@')[0],
+      });
+
+    if (insertError) {
+      console.error('User profile creation error:', insertError.message);
+      return res.status(400).json({ error: insertError.message || 'Failed to create user profile' });
+    }
+
+    console.log('Signup successful for:', emailLower);
+    res.json({
+      success: true,
+      message: 'Signup successful',
+      userId: authUserId,
+      email: emailLower
+    });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('Signup Error:', errorMsg, error);
+    res.status(500).json({ error: `Server error: ${errorMsg}` });
+  }
+});
+
 app.post('/api/create-order', async (req: Request, res: Response) => {
   try {
     const { amount, currency, receipt, notes } = req.body;

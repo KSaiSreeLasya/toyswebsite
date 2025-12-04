@@ -52,7 +52,8 @@ export const createRazorpayOrder = async (
 
     return data;
   } catch (error) {
-    console.error('Error creating Razorpay order:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error creating Razorpay order:', errorMsg);
 
     const mockOrder: RazorpayOrderResponse = {
       id: `order_${Date.now()}`,
@@ -118,7 +119,8 @@ export const verifyPayment = async (
     const data = await response.json();
     return data.success;
   } catch (error) {
-    console.error('Error verifying payment:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Error verifying payment:', errorMsg);
     return false;
   }
 };

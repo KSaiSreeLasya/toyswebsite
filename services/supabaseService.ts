@@ -49,59 +49,37 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
 
     console.log('Attempting signup for:', emailLower);
 
-    // Check if user already exists in users table
-    const { data: existingUser, error: checkError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', emailLower);
-
-    if (checkError) {
-      console.error('Check user error:', checkError);
-    }
-
-    if (existingUser && existingUser.length > 0) {
-      return { success: false, error: 'An account with this email already exists.' };
-    }
-
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: emailLower,
-      password,
+    // Call backend signup endpoint
+    const response = await fetch('/api/signup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: emailLower,
+        password,
+        role: roleLower,
+      })
     });
 
-    if (authError) {
-      console.error('Signup auth error:', authError);
-      return { success: false, error: authError.message || 'Signup failed.' };
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error('Failed to parse response:', parseError);
+      return { success: false, error: 'Invalid server response. Please try again.' };
     }
 
-    if (!authData?.user) {
-      return { success: false, error: 'Signup failed: No user created.' };
-    }
-
-    const authUserId = authData.user.id;
-    console.log('Auth signup successful, creating user profile');
-
-    // Insert user record in users table
-    const { data: newUser, error: insertError } = await supabase
-      .from('users')
-      .insert({
-        id: authUserId,
-        email: emailLower,
-        role: roleLower,
-        name: emailLower.split('@')[0],
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('Insert user error:', insertError);
-      return { success: false, error: insertError.message || 'Failed to create user profile.' };
+    if (!response.ok) {
+      console.error('Signup error:', data?.error || 'Unknown error');
+      return { success: false, error: data?.error || 'Signup failed.' };
     }
 
     console.log('Signup successful');
-    return { success: true, user: { ...newUser, id: authUserId } };
+    return { success: true, user: { email: emailLower, role: roleLower, name: emailLower.split('@')[0] } };
   } catch (err) {
-    console.error('Signup exception:', err);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Signup exception:', errorMsg);
     return { success: false, error: 'Signup failed. Please try again.' };
   }
 };
@@ -125,7 +103,7 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     });
 
     if (authError) {
-      console.error('Auth error details:', authError);
+      console.error('Auth error details:', authError?.message || 'Unknown auth error');
       return { success: false, error: authError.message || 'Authentication failed.' };
     }
 
@@ -158,7 +136,7 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
         .single();
 
       if (insertError) {
-        console.error('Insert error:', insertError);
+        console.error('Insert error:', insertError?.message || 'Unknown insert error');
         return { success: false, error: 'Failed to create user record.' };
       }
 
@@ -167,14 +145,15 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     }
 
     if (selectError && user === null) {
-      console.error('User select error:', selectError);
+      console.error('User select error:', selectError?.message || 'Unknown select error');
       return { success: false, error: 'User not found.' };
     }
 
     console.log('Sign in successful');
     return { success: true, user: { ...user, id: authUserId } };
   } catch (err) {
-    console.error('Unexpected sign in error:', err);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Unexpected sign in error:', errorMsg);
     return { success: false, error: 'Login failed. Please try again.' };
   }
 };
@@ -208,7 +187,8 @@ export const initializeAdminUser = async (): Promise<{ success: boolean; message
       return { success: false, message: signUpResult.error || 'Failed to create admin user.' };
     }
   } catch (error) {
-    console.error('Initialize Admin Error:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Initialize Admin Error:', errorMsg);
     return { success: false, message: 'Error initializing admin user.' };
   }
 };
