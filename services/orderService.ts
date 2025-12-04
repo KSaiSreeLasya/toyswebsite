@@ -103,8 +103,9 @@ export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> =>
 
     return (data || []).map((order: any) => {
       const totalInPaise = order.total_amount;
-      const coinsEarned = Math.floor(totalInPaise / 100);
-      const discount = Math.floor(totalInPaise * 0.01);
+      const totalInRupees = totalInPaise / 100;
+      const coinsEarned = Math.floor(totalInRupees / 100);
+      const discount = Math.floor(totalInRupees * 0.01);
 
       return {
         id: order.id,
@@ -120,7 +121,7 @@ export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> =>
           rating: 0,
           stock: 0
         })),
-        total: totalInPaise,
+        total: Math.round(totalInRupees * 100) / 100,
         date: order.created_at,
         status: order.status,
         coinsEarned,
