@@ -51,6 +51,23 @@ app.use((req: Request, res: Response, next: Function) => {
   next();
 });
 
+// Serve static frontend files
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const distPath = path.join(__dirname, 'dist');
+
+// Serve static files from dist
+app.use(express.static(distPath));
+
+// SPA fallback: serve index.html for all non-API routes
+app.get('*', (req: Request, res: Response) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(distPath, 'index.html'));
+  }
+});
+
 const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
