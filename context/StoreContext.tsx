@@ -117,47 +117,54 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         try {
           const dbProducts = await getProductsFromDatabase();
           if (dbProducts.length === 0) {
-            console.log('Database is empty, seeding products...');
-            const seedResponse = await fetch('/api/seed-products', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' }
-            });
-            if (seedResponse.ok) {
-              let seedData;
-              try {
-                const contentType = seedResponse.headers.get('content-type');
-                if (contentType && contentType.includes('application/json')) {
-                  seedData = await seedResponse.json();
-                } else {
-                  const text = await seedResponse.text();
-                  console.warn('Seed response is not JSON:', text);
-                  seedData = { success: false };
+            console.log('📦 Database is empty, attempting to seed products...');
+            try {
+              const seedResponse = await fetch('/api/seed-products', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+              });
+
+              let seedData = { success: false, skipped: false };
+              if (seedResponse.ok) {
+                try {
+                  const contentType = seedResponse.headers.get('content-type');
+                  if (contentType && contentType.includes('application/json')) {
+                    seedData = await seedResponse.json();
+                  } else {
+                    const text = await seedResponse.text();
+                    console.warn('⚠️ Seed response is not JSON:', text);
+                  }
+                } catch (parseError) {
+                  console.error('Failed to parse seed response:', parseError);
                 }
-              } catch (parseError) {
-                console.error('Failed to parse seed response:', parseError);
-                seedData = { success: false };
               }
-              console.log('Seed response:', seedData);
-              // Reload products after seeding
+
+              console.log('📦 Seed response:', seedData);
+
+              // Try to reload products from database after seeding
               const reloadedProducts = await getProductsFromDatabase();
               if (reloadedProducts.length > 0) {
+                console.log('✅ Products loaded from database:', reloadedProducts.length);
                 setProducts(reloadedProducts);
                 localStorage.setItem('wl_products', JSON.stringify(reloadedProducts));
               } else {
+                // Database is still empty (Supabase not configured or seeding skipped)
+                console.log('✅ Using local products (Supabase not configured)');
                 setProducts(INITIAL_PRODUCTS);
                 localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
               }
-            } else {
-              console.error('Seed failed, using local products');
+            } catch (seedError) {
+              console.warn('⚠️ Seed request failed, using local products:', seedError);
               setProducts(INITIAL_PRODUCTS);
               localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
             }
           } else {
+            console.log('✅ Products loaded from database:', dbProducts.length);
             setProducts(dbProducts);
             localStorage.setItem('wl_products', JSON.stringify(dbProducts));
           }
         } catch (err) {
-          console.log('Error syncing products, using local:', err);
+          console.log('⚠️ Error syncing products, using local:', err);
           if (storedProducts) {
             setProducts(JSON.parse(storedProducts));
           } else {
