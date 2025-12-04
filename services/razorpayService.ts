@@ -416,10 +416,23 @@ export const verifyPayment = async (
 
     let data;
     try {
+      const responseText = await response.text();
+
+      if (!responseText) {
+        console.error('Empty response from server');
+        return false;
+      }
+
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
+        try {
+          data = JSON.parse(responseText);
+        } catch (jsonError) {
+          console.error('Failed to parse JSON response:', responseText);
+          return false;
+        }
       } else {
+        console.error('Response is not JSON');
         return false;
       }
     } catch (parseError) {
@@ -427,7 +440,7 @@ export const verifyPayment = async (
       return false;
     }
 
-    return data.success;
+    return data?.success || false;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error verifying payment:', errorMsg);
