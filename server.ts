@@ -690,6 +690,16 @@ app.get('/api/health', (req: Request, res: Response) => {
   });
 });
 
+// SPA fallback: serve index.html for all non-API routes (MUST be last)
+app.get('*', (req: Request, res: Response) => {
+  res.sendFile(path.join(distPath, 'index.html'), (err) => {
+    if (err) {
+      console.error('Error serving index.html:', err);
+      res.status(404).json({ error: 'Not found' });
+    }
+  });
+});
+
 app.listen(port, () => {
   console.log(`Backend server running at http://localhost:${port}`);
   console.log(`API Key configured: ${!!apiKey}`);
