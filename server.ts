@@ -476,15 +476,16 @@ app.post('/api/create-order', async (req: Request, res: Response) => {
       return res.status(500).json({ error: 'Razorpay Secret Key not configured' });
     }
 
-    const orderId = `order_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Use timestamp-based order ID that's compatible with Razorpay test mode
+    const orderId = `order_${Date.now()}_${Math.floor(Math.random() * 1000000).toString()}`;
 
     const orderData = {
       id: orderId,
       entity: 'order',
-      amount,
+      amount: Math.floor(amount), // Ensure integer
       amount_paid: 0,
-      amount_due: amount,
-      currency,
+      amount_due: Math.floor(amount),
+      currency: currency.toUpperCase(),
       receipt,
       status: 'created',
       attempts: 0,
@@ -492,6 +493,7 @@ app.post('/api/create-order', async (req: Request, res: Response) => {
       created_at: Math.floor(Date.now() / 1000)
     };
 
+    console.log('Created order:', orderData);
     res.json(orderData);
   } catch (error) {
     console.error('Create Order Error:', error);
