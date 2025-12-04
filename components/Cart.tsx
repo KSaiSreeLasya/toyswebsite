@@ -73,7 +73,20 @@ const Cart: React.FC = () => {
         }
       };
 
-      const razorpayResponse = await openRazorpayCheckout(options);
+      let razorpayResponse;
+      try {
+        razorpayResponse = await openRazorpayCheckout(options);
+      } catch (rzpError: any) {
+        const errorMsg = rzpError?.message || 'Failed to open payment gateway';
+        console.error('Razorpay checkout error:', errorMsg, rzpError);
+        throw new Error(`Payment gateway error: ${errorMsg}`);
+      }
+
+      if (!razorpayResponse) {
+        throw new Error('No payment response received from Razorpay');
+      }
+
+      console.log('Payment completed, verifying with backend...');
 
       // Verify the payment with backend
       const isVerified = await verifyPayment({
@@ -95,7 +108,12 @@ const Cart: React.FC = () => {
       console.error('Payment error:', error);
       setIsProcessing(false);
       const errorMessage = error?.message || (typeof error === 'string' ? error : 'Payment failed. Please try again.');
-      alert(errorMessage);
+      Swal.fire({
+        icon: 'error',
+        title: 'Payment Failed',
+        text: errorMessage,
+        confirmButtonColor: '#7c3aed',
+      });
     }
   };
 
