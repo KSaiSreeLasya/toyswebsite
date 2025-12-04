@@ -60,13 +60,6 @@ const distPath = path.join(__dirname, 'dist');
 // Serve static files from dist
 app.use(express.static(distPath));
 
-// SPA fallback: serve index.html for all non-API routes
-app.get('*', (req: Request, res: Response) => {
-  if (!req.path.startsWith('/api')) {
-    res.sendFile(path.join(distPath, 'index.html'));
-  }
-});
-
 const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
@@ -78,7 +71,18 @@ const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+console.log('Server startup - Environment variables:');
+console.log('  VITE_SUPABASE_URL:', supabaseUrl ? '✓ Set' : '✗ Missing');
+console.log('  SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? '✓ Set' : '✗ Missing');
+console.log('  VITE_RAZORPAY_KEY_ID:', process.env.VITE_RAZORPAY_KEY_ID ? '✓ Set' : '✗ Missing');
+
 const supabaseAdmin = supabaseServiceKey && supabaseUrl ? createClient(supabaseUrl, supabaseServiceKey) : null;
+
+if (!supabaseAdmin) {
+  console.error('❌ Supabase admin not initialized - signup will fail!');
+} else {
+  console.log('✅ Supabase admin client initialized');
+}
 
 interface GenerateDescriptionRequest {
   productName: string;
@@ -441,13 +445,15 @@ app.post('/api/signup', async (req: Request, res: Response) => {
     const { email, password, role = 'customer' } = req.body;
 
     console.log('Signup request received for:', email);
+    console.log('Supabase config - URL exists:', !!supabaseUrl, 'Key exists:', !!supabaseServiceKey);
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
     if (!supabaseAdmin) {
-      console.error('Supabase admin not configured. URL:', !!supabaseUrl, 'Key:', !!supabaseServiceKey);
+      const errorMsg = `Supabase admin not configured. URL: ${!!supabaseUrl}, Key: ${!!supabaseServiceKey}`;
+      console.error(errorMsg);
       return res.status(500).json({ error: 'Supabase not configured. Contact server admin.' });
     }
 
@@ -516,7 +522,7 @@ app.post('/api/signup', async (req: Request, res: Response) => {
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('Signup Error:', errorMsg, error);
-    res.status(500).json({ error: `Server error: ${errorMsg}` });
+    return res.status(500).json({ error: `Server error: ${errorMsg}` });
   }
 });
 
@@ -694,6 +700,16 @@ app.get('/api/health', (req: Request, res: Response) => {
       isTestMode && '🧪 Razorpay in TEST mode - use test cards for payments'
     ].filter(Boolean),
     message: 'API server is ready'
+  });
+});
+
+// SPA fallback: serve index.html for all non-API routes (MUST be last)
+app.get('*', (req: Request, res: Response) => {
+  res.sendFile(path.join(distPath, 'index.html'), (err) => {
+    if (err) {
+      console.error('Error serving index.html:', err);
+      res.status(404).json({ error: 'Not found' });
+    }
   });
 });
 
