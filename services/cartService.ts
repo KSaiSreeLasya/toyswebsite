@@ -33,12 +33,13 @@ export const addToCartDatabase = async (userId: string, product: CartItem): Prom
       }, { onConflict: 'user_id,product_id' });
 
     if (error) {
-      console.error(`Error adding to cart: ${error?.message || JSON.stringify(error)}`);
+      console.error('Error adding to cart:', error?.message || 'Unknown error');
       return false;
     }
     return true;
   } catch (err) {
-    console.error(`Error in addToCartDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error in addToCartDatabase:', errorMsg);
     return false;
   }
 };
@@ -67,12 +68,13 @@ export const removeFromCartDatabase = async (userId: string, productId: string):
       .eq('product_id', productId);
 
     if (error) {
-      console.error(`Error removing from cart: ${error?.message || JSON.stringify(error)}`);
+      console.error('Error removing from cart:', error?.message || 'Unknown error');
       return false;
     }
     return true;
   } catch (err) {
-    console.error(`Error in removeFromCartDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error in removeFromCartDatabase:', errorMsg);
     return false;
   }
 };
@@ -105,12 +107,13 @@ export const updateCartQuantityDatabase = async (userId: string, productId: stri
       .eq('product_id', productId);
 
     if (error) {
-      console.error(`Error updating cart quantity: ${error?.message || JSON.stringify(error)}`);
+      console.error('Error updating cart quantity:', error?.message || 'Unknown error');
       return false;
     }
     return true;
   } catch (err) {
-    console.error(`Error in updateCartQuantityDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error in updateCartQuantityDatabase:', errorMsg);
     return false;
   }
 };
@@ -145,7 +148,7 @@ export const getCartFromDatabase = async (userId: string): Promise<CartItem[]> =
       .eq('user_id', userId);
 
     if (error) {
-      console.error(`Error fetching cart: ${error?.message || JSON.stringify(error)}`);
+      console.error('Error fetching cart:', error?.message || 'Unknown error');
       return [];
     }
 
@@ -155,7 +158,8 @@ export const getCartFromDatabase = async (userId: string): Promise<CartItem[]> =
       quantity: item.quantity
     }));
   } catch (err) {
-    console.error(`Error in getCartFromDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error in getCartFromDatabase:', errorMsg);
     return [];
   }
 };
@@ -178,12 +182,13 @@ export const clearCartDatabase = async (userId: string): Promise<boolean> => {
       .eq('user_id', userId);
 
     if (error) {
-      console.error(`Error clearing cart: ${error?.message || JSON.stringify(error)}`);
+      console.error('Error clearing cart:', error?.message || 'Unknown error');
       return false;
     }
     return true;
   } catch (err) {
-    console.error(`Error in clearCartDatabase: ${err instanceof Error ? err.message : JSON.stringify(err)}`);
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error in clearCartDatabase:', errorMsg);
     return false;
   }
 };
