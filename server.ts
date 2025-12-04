@@ -54,9 +54,6 @@ app.use((req: Request, res: Response, next: Function) => {
 });
 
 // Serve static frontend files
-import path from 'path';
-import { fileURLToPath } from 'url';
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distPath = path.join(__dirname, 'dist');
 
