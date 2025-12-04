@@ -56,7 +56,20 @@ export const getGiftRecommendation = async (query: string, availableProducts: Pr
       }),
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.warn('Response is not JSON:', text);
+        data = { error: 'Invalid server response format' };
+      }
+    } catch (parseError) {
+      console.error('Failed to parse response:', parseError);
+      return 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
+    }
 
     if (!response.ok) {
       console.error('API Error:', data);
