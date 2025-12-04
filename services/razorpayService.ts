@@ -85,21 +85,41 @@ export const createRazorpayOrder = async (
   }
 };
 
-export const openRazorpayCheckout = (
-  options: any
-): Promise<RazorpayPaymentVerification> => {
+// Helper to wait for SDK to load
+const waitForRazorpaySDK = (maxWaitMs: number = 10000): Promise<any> => {
   return new Promise((resolve, reject) => {
     const Razorpay = (window as any).Razorpay;
-
-    if (!Razorpay) {
-      reject(new Error('Razorpay SDK not loaded. Please refresh the page.'));
+    if (Razorpay) {
+      resolve(Razorpay);
       return;
     }
 
+    const startTime = Date.now();
+    const checkInterval = setInterval(() => {
+      const Razorpay = (window as any).Razorpay;
+      if (Razorpay) {
+        clearInterval(checkInterval);
+        resolve(Razorpay);
+      } else if (Date.now() - startTime > maxWaitMs) {
+        clearInterval(checkInterval);
+        reject(new Error('Razorpay SDK took too long to load'));
+      }
+    }, 100);
+  });
+};
+
+export const openRazorpayCheckout = (
+  options: any
+): Promise<RazorpayPaymentVerification> => {
+  return new Promise(async (resolve, reject) => {
     let timeoutId: NodeJS.Timeout | null = null;
     let isResolved = false;
 
     try {
+      // First, ensure SDK is loaded
+      console.log('Waiting for Razorpay SDK to load...');
+      const Razorpay = await waitForRazorpaySDK();
+      console.log('Razorpay SDK ready');
       const isTestMode = options.key?.startsWith('rzp_test_');
 
       console.log('Initializing Razorpay checkout with:', {
