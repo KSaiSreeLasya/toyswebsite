@@ -434,13 +434,15 @@ app.post('/api/signup', async (req: Request, res: Response) => {
     const { email, password, role = 'customer' } = req.body;
 
     console.log('Signup request received for:', email);
+    console.log('Supabase config - URL exists:', !!supabaseUrl, 'Key exists:', !!supabaseServiceKey);
 
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
     if (!supabaseAdmin) {
-      console.error('Supabase admin not configured. URL:', !!supabaseUrl, 'Key:', !!supabaseServiceKey);
+      const errorMsg = `Supabase admin not configured. URL: ${!!supabaseUrl}, Key: ${!!supabaseServiceKey}`;
+      console.error(errorMsg);
       return res.status(500).json({ error: 'Supabase not configured. Contact server admin.' });
     }
 
