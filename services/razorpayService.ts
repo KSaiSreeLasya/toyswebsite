@@ -90,19 +90,33 @@ const waitForRazorpaySDK = (maxWaitMs: number = 10000): Promise<any> => {
   return new Promise((resolve, reject) => {
     const Razorpay = (window as any).Razorpay;
     if (Razorpay) {
+      console.log('✅ Razorpay SDK already loaded');
       resolve(Razorpay);
       return;
     }
 
+    // Check if there's a loading error
+    const winAny = window as any;
+    if (winAny.__razorpayError) {
+      reject(new Error(`Razorpay SDK Error: ${winAny.__razorpayError}`));
+      return;
+    }
+
+    console.log('⏳ Waiting for Razorpay SDK to load...');
     const startTime = Date.now();
     const checkInterval = setInterval(() => {
       const Razorpay = (window as any).Razorpay;
       if (Razorpay) {
         clearInterval(checkInterval);
+        console.log('✅ Razorpay SDK loaded');
         resolve(Razorpay);
+      } else if ((window as any).__razorpayError) {
+        clearInterval(checkInterval);
+        reject(new Error(`Razorpay SDK Error: ${(window as any).__razorpayError}`));
       } else if (Date.now() - startTime > maxWaitMs) {
         clearInterval(checkInterval);
-        reject(new Error('Razorpay SDK took too long to load'));
+        const elapsed = Date.now() - startTime;
+        reject(new Error(`Razorpay SDK failed to load after ${elapsed}ms. Check network connection or browser extensions.`));
       }
     }, 100);
   });
