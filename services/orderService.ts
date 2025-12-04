@@ -1,11 +1,12 @@
 import { supabase, isSupabaseEnabled } from './supabaseService';
 import { CartItem, Order } from '../types';
 
-export const createOrderInDatabase = async (userId: string, items: CartItem[], total: number): Promise<Order | null> => {
+export const createOrderInDatabase = async (userId: string, items: CartItem[], totalInPaise: number): Promise<Order | null> => {
   try {
     const orderId = `ORD-${Date.now()}`;
-    const coinsEarned = Math.floor(total / 100);
-    const discount = Math.floor(total * 0.01);
+    const totalInRupees = totalInPaise / 100;
+    const coinsEarned = Math.floor(totalInRupees / 100);
+    const discount = Math.floor(totalInRupees * 0.01);
 
     if (!isSupabaseEnabled) {
       console.log('Supabase not configured, creating local order only');
@@ -13,7 +14,7 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
         id: orderId,
         userId,
         items,
-        total,
+        total: Math.round(totalInRupees * 100) / 100,
         date: new Date().toISOString(),
         status: 'pending',
         coinsEarned,
@@ -27,7 +28,7 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
       .insert({
         id: orderId,
         user_id: userId,
-        total_amount: total,
+        total_amount: totalInPaise,
         status: 'pending'
       });
 
