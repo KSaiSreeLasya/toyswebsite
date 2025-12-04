@@ -62,11 +62,17 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       })
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (parseError) {
+      console.error('Failed to parse response:', parseError);
+      return { success: false, error: 'Invalid server response. Please try again.' };
+    }
 
     if (!response.ok) {
-      console.error('Signup error:', data.error);
-      return { success: false, error: data.error || 'Signup failed.' };
+      console.error('Signup error:', data?.error || 'Unknown error');
+      return { success: false, error: data?.error || 'Signup failed.' };
     }
 
     console.log('Signup successful');
