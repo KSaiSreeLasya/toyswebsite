@@ -141,18 +141,47 @@ export const openRazorpayCheckout = (
     let isResolved = false;
 
     try {
+      // Validate all required parameters first
+      const requiredFields = ['key', 'amount', 'order_id', 'currency'];
+      const missingFields = requiredFields.filter(field => !options[field]);
+
+      if (missingFields.length > 0) {
+        const errorMsg = `Missing required Razorpay parameters: ${missingFields.join(', ')}`;
+        console.error('❌ Configuration Error:', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      // Validate parameter types and values
+      if (typeof options.key !== 'string' || !options.key.trim()) {
+        throw new Error('Razorpay key is missing or invalid');
+      }
+
+      if (typeof options.amount !== 'number' || options.amount <= 0) {
+        throw new Error(`Invalid amount: ${options.amount}. Amount must be a positive number (in paise)`);
+      }
+
+      if (typeof options.currency !== 'string' || options.currency.length !== 3) {
+        throw new Error(`Invalid currency: ${options.currency}. Must be a 3-letter code (e.g., INR)`);
+      }
+
+      if (typeof options.order_id !== 'string' || !options.order_id.trim()) {
+        throw new Error('Razorpay order_id is missing or invalid');
+      }
+
       // First, ensure SDK is loaded
-      console.log('Waiting for Razorpay SDK to load...');
+      console.log('🔄 Loading Razorpay SDK...');
       const Razorpay = await waitForRazorpaySDK();
-      console.log('Razorpay SDK ready');
 
-      const isTestMode = options.key?.startsWith('rzp_test_');
+      const isTestMode = options.key.startsWith('rzp_test_');
 
-      console.log('Initializing Razorpay checkout with:', {
+      console.log('✅ Razorpay Configuration:', {
+        keyId: options.key.substring(0, 10) + '...',
         amount: options.amount,
         currency: options.currency,
-        order_id: options.order_id,
-        testMode: isTestMode
+        orderId: options.order_id,
+        testMode: isTestMode,
+        https: window.location.protocol === 'https:',
+        url: window.location.href
       });
 
       // Create a wrapper function to handle the response
