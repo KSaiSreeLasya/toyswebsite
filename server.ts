@@ -181,6 +181,70 @@ app.post('/api/setup-admin', async (req: Request, res: Response) => {
   }
 });
 
+app.post('/api/signup', async (req: Request, res: Response) => {
+  try {
+    const { email, password, role = 'customer' } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    if (!supabaseAdmin) {
+      return res.status(500).json({ error: 'Supabase admin client not configured' });
+    }
+
+    const emailLower = email.toLowerCase();
+    const roleLower = role.toLowerCase();
+
+    // Check if user already exists
+    const { data: existingUsers } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', emailLower);
+
+    if (existingUsers && existingUsers.length > 0) {
+      return res.status(400).json({ error: 'User with this email already exists' });
+    }
+
+    // Create auth user
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: emailLower,
+      password,
+      email_confirm: false,
+    });
+
+    if (authError || !authData.user) {
+      return res.status(400).json({ error: authError?.message || 'Failed to create auth user' });
+    }
+
+    const authUserId = authData.user.id;
+
+    // Create user profile
+    const { error: insertError } = await supabaseAdmin
+      .from('users')
+      .insert({
+        id: authUserId,
+        email: emailLower,
+        role: roleLower,
+        name: emailLower.split('@')[0],
+      });
+
+    if (insertError) {
+      return res.status(400).json({ error: insertError.message || 'Failed to create user profile' });
+    }
+
+    res.json({
+      success: true,
+      message: 'Signup successful',
+      userId: authUserId,
+      email: emailLower
+    });
+  } catch (error) {
+    console.error('Signup Error:', error);
+    res.status(500).json({ error: 'Signup failed. Please try again.' });
+  }
+});
+
 app.post('/api/create-order', async (req: Request, res: Response) => {
   try {
     const { amount, currency, receipt, notes } = req.body;
