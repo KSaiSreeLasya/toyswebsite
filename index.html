@@ -104,15 +104,17 @@
     razorpayScript.src = 'https://checkout.razorpay.com/v1/checkout.js';
     razorpayScript.async = true;
     razorpayScript.defer = true;
+    razorpayScript.crossOrigin = 'anonymous';
 
     razorpayScript.onload = () => {
       window.__razorpayReady = true;
-      console.log('✅ Razorpay SDK loaded successfully');
+      console.log('✅ Razorpay SDK loaded successfully from CDN');
     };
 
-    razorpayScript.onerror = () => {
-      window.__razorpayError = 'Failed to load Razorpay SDK from CDN';
-      console.error('❌ Failed to load Razorpay SDK from CDN');
+    razorpayScript.onerror = (e) => {
+      window.__razorpayError = 'Failed to load Razorpay SDK from CDN (network error or CORS blocked)';
+      console.error('❌ Failed to load Razorpay SDK:', e);
+      console.warn('Possible causes: Network issues, CORS restrictions, Content-Security-Policy, browser extensions blocking requests');
     };
 
     document.head.appendChild(razorpayScript);
@@ -123,14 +125,17 @@
       checkCount++;
       if (window.Razorpay) {
         window.__razorpayReady = true;
-        console.log('✅ Razorpay SDK detected');
+        console.log('✅ Razorpay SDK detected via fallback check');
         clearInterval(checkInterval);
-      } else if (checkCount > 100) {
-        // 10 seconds passed (100 * 100ms)
+      } else if (checkCount > 150) {
+        // 15 seconds passed (150 * 100ms)
         clearInterval(checkInterval);
         if (!window.__razorpayError) {
-          window.__razorpayError = 'Razorpay SDK failed to load within timeout';
-          console.error('❌ Razorpay SDK timeout');
+          window.__razorpayError = 'Razorpay SDK failed to load within 15 seconds (possible network issue or blocked by network/browser)';
+          console.error('❌ Razorpay SDK timeout - check internet connection and browser settings');
+          console.warn('- Is the internet connection stable?');
+          console.warn('- Are there browser extensions blocking scripts?');
+          console.warn('- Is the page behind a corporate firewall?');
         }
       }
     }, 100);
