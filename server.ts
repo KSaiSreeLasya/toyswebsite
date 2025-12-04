@@ -225,7 +225,13 @@ app.post('/api/setup-admin', async (req: Request, res: Response) => {
 app.post('/api/seed-products', async (req: Request, res: Response) => {
   try {
     if (!supabaseAdmin) {
-      return res.status(500).json({ error: 'Supabase admin client not configured' });
+      console.warn('⚠️ Supabase not configured - seeding skipped. App will use local products.');
+      return res.json({
+        success: true,
+        message: 'Supabase not configured. Using local products.',
+        skipped: true,
+        count: 0
+      });
     }
 
     const INITIAL_PRODUCTS = [
