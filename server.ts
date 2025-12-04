@@ -612,12 +612,31 @@ app.post('/api/verify-payment', async (req: Request, res: Response) => {
 });
 
 app.get('/api/health', (req: Request, res: Response) => {
+  const razorpayKeyId = process.env.VITE_RAZORPAY_KEY_ID;
+  const razorpaySecretKey = process.env.VITE_RAZORPAY_SECRET_KEY;
+  const isTestMode = razorpayKeyId?.startsWith('rzp_test_');
+
   res.json({
     status: 'ok',
-    apiKeyConfigured: !!apiKey,
-    supabaseConfigured: !!supabaseAdmin,
-    razorpayConfigured: !!(process.env.VITE_RAZORPAY_KEY_ID && process.env.VITE_RAZORPAY_SECRET_KEY),
-    message: 'API is ready with Razorpay integration'
+    server: 'running',
+    timestamp: new Date().toISOString(),
+    configuration: {
+      geminiApiKey: !!apiKey,
+      supabase: !!supabaseAdmin,
+      razorpay: {
+        keyIdConfigured: !!razorpayKeyId,
+        secretKeyConfigured: !!razorpaySecretKey,
+        testMode: isTestMode,
+        mode: isTestMode ? 'TEST' : 'PRODUCTION'
+      }
+    },
+    warnings: [
+      !apiKey && '⚠️ GEMINI_API_KEY not configured - AI features disabled',
+      !supabaseAdmin && '⚠️ Supabase not configured - database features disabled',
+      !razorpayKeyId && '⚠️ VITE_RAZORPAY_KEY_ID not configured - payments disabled',
+      isTestMode && '🧪 Razorpay in TEST mode - use test cards for payments'
+    ].filter(Boolean),
+    message: 'API server is ready'
   });
 });
 
