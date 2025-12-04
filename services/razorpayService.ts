@@ -45,12 +45,25 @@ export const createRazorpayOrder = async (
 
     let data;
     try {
+      const responseText = await response.text();
+
+      if (!responseText) {
+        if (!response.ok) {
+          throw new Error('Failed to create Razorpay order');
+        }
+        throw new Error('Empty response from server');
+      }
+
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
+        try {
+          data = JSON.parse(responseText);
+        } catch (jsonError) {
+          console.warn('Failed to parse JSON response:', responseText);
+          throw new Error('Invalid server response format');
+        }
       } else {
-        const text = await response.text();
-        console.warn('Response is not JSON:', text);
+        console.warn('Response is not JSON:', responseText);
         throw new Error('Invalid server response format');
       }
     } catch (parseError) {
@@ -59,7 +72,7 @@ export const createRazorpayOrder = async (
     }
 
     if (!response.ok) {
-      const errorMessage = data.message || data.error || 'Failed to create Razorpay order';
+      const errorMessage = data?.message || data?.error || 'Failed to create Razorpay order';
       throw new Error(errorMessage);
     }
 
@@ -403,10 +416,23 @@ export const verifyPayment = async (
 
     let data;
     try {
+      const responseText = await response.text();
+
+      if (!responseText) {
+        console.error('Empty response from server');
+        return false;
+      }
+
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
+        try {
+          data = JSON.parse(responseText);
+        } catch (jsonError) {
+          console.error('Failed to parse JSON response:', responseText);
+          return false;
+        }
       } else {
+        console.error('Response is not JSON');
         return false;
       }
     } catch (parseError) {
@@ -414,7 +440,7 @@ export const verifyPayment = async (
       return false;
     }
 
-    return data.success;
+    return data?.success || false;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error verifying payment:', errorMsg);

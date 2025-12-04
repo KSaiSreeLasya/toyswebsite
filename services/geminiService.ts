@@ -14,13 +14,23 @@ export const generateProductDescription = async (productName: string, category: 
 
     let data;
     try {
+      const responseText = await response.text();
+
+      if (!responseText) {
+        return 'Could not generate description at this time.';
+      }
+
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
+        try {
+          data = JSON.parse(responseText);
+        } catch (jsonError) {
+          console.error('Failed to parse JSON response:', responseText);
+          return 'Could not generate description at this time.';
+        }
       } else {
-        const text = await response.text();
-        console.warn('Response is not JSON:', text);
-        data = { error: 'Invalid server response format' };
+        console.warn('Response is not JSON:', responseText);
+        return 'Could not generate description at this time.';
       }
     } catch (parseError) {
       console.error('Failed to parse response:', parseError);
@@ -29,10 +39,10 @@ export const generateProductDescription = async (productName: string, category: 
 
     if (!response.ok) {
       console.error('API Error:', data);
-      return data.error || 'Could not generate description at this time.';
+      return data?.error || 'Could not generate description at this time.';
     }
 
-    return data.description || '';
+    return data?.description || '';
   } catch (error) {
     console.error('Error generating description:', error);
     return 'Could not generate description at this time.';
@@ -58,13 +68,23 @@ export const getGiftRecommendation = async (query: string, availableProducts: Pr
 
     let data;
     try {
+      const responseText = await response.text();
+
+      if (!responseText) {
+        return 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
+      }
+
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
+        try {
+          data = JSON.parse(responseText);
+        } catch (jsonError) {
+          console.error('Failed to parse JSON response:', responseText);
+          return 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
+        }
       } else {
-        const text = await response.text();
-        console.warn('Response is not JSON:', text);
-        data = { error: 'Invalid server response format' };
+        console.warn('Response is not JSON:', responseText);
+        return 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
       }
     } catch (parseError) {
       console.error('Failed to parse response:', parseError);
@@ -73,10 +93,10 @@ export const getGiftRecommendation = async (query: string, availableProducts: Pr
 
     if (!response.ok) {
       console.error('API Error:', data);
-      return data.error || 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
+      return data?.error || 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
     }
 
-    return data.recommendation || "I couldn't think of anything to say.";
+    return data?.recommendation || "I couldn't think of anything to say.";
   } catch (error) {
     console.error('Error getting recommendation:', error);
     return 'I\'m having trouble thinking of a recommendation right now. Try browsing the categories!';
