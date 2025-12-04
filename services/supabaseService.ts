@@ -62,17 +62,33 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       })
     });
 
+    if (!response.ok) {
+      let errorMessage = 'Signup failed.';
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const errorData = await response.json();
+          errorMessage = errorData?.error || errorMessage;
+        } else {
+          const text = await response.text();
+          if (text) {
+            console.warn('Non-JSON response:', text);
+            errorMessage = text.substring(0, 200);
+          }
+        }
+      } catch (parseError) {
+        console.warn('Could not parse error response:', parseError);
+      }
+      console.error('Signup error:', errorMessage);
+      return { success: false, error: errorMessage };
+    }
+
     let data;
     try {
       data = await response.json();
     } catch (parseError) {
-      console.error('Failed to parse response:', parseError);
+      console.error('Failed to parse success response:', parseError);
       return { success: false, error: 'Invalid server response. Please try again.' };
-    }
-
-    if (!response.ok) {
-      console.error('Signup error:', data?.error || 'Unknown error');
-      return { success: false, error: data?.error || 'Signup failed.' };
     }
 
     console.log('Signup successful');

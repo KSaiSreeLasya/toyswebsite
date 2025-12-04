@@ -123,7 +123,20 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
               headers: { 'Content-Type': 'application/json' }
             });
             if (seedResponse.ok) {
-              const seedData = await seedResponse.json();
+              let seedData;
+              try {
+                const contentType = seedResponse.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                  seedData = await seedResponse.json();
+                } else {
+                  const text = await seedResponse.text();
+                  console.warn('Seed response is not JSON:', text);
+                  seedData = { success: false };
+                }
+              } catch (parseError) {
+                console.error('Failed to parse seed response:', parseError);
+                seedData = { success: false };
+              }
               console.log('Seed response:', seedData);
               // Reload products after seeding
               const reloadedProducts = await getProductsFromDatabase();
