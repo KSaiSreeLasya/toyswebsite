@@ -12,7 +12,7 @@ app.use(express.json());
 
 // Add Permissions-Policy header for payment gateway APIs
 app.use((req: Request, res: Response, next: Function) => {
-  res.setHeader('Permissions-Policy', 'payment=*, publickey-credentials-get=*, clipboard-write=*, web-share=*, otp-credentials=*, publickey-credentials-create=*');
+  res.setHeader('Permissions-Policy', 'payment=(*), publickey-credentials-get=(*), clipboard-write=(*), web-share=(*), otp-credentials=(*), publickey-credentials-create=(*)');
   next();
 });
 
