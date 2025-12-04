@@ -532,22 +532,42 @@ app.post('/api/verify-payment', async (req: Request, res: Response) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return res.status(400).json({ error: 'Missing payment verification details' });
+    console.log('🔐 Verifying payment...');
+
+    // Validate required fields
+    if (!razorpay_order_id) {
+      console.warn('⚠️ Missing razorpay_order_id');
+      return res.status(400).json({ error: 'Missing razorpay_order_id' });
     }
 
+    if (!razorpay_payment_id) {
+      console.warn('⚠️ Missing razorpay_payment_id');
+      return res.status(400).json({ error: 'Missing razorpay_payment_id' });
+    }
+
+    if (!razorpay_signature) {
+      console.warn('⚠️ Missing razorpay_signature');
+      return res.status(400).json({ error: 'Missing razorpay_signature' });
+    }
+
+    const razorpayKeyId = process.env.VITE_RAZORPAY_KEY_ID;
     const razorpaySecretKey = process.env.VITE_RAZORPAY_SECRET_KEY;
-    if (!razorpaySecretKey) {
-      return res.status(500).json({ error: 'Razorpay Secret Key not configured' });
-    }
 
-    // For test mode (rzp_test_ keys), accept test signatures
-    const isTestMode = razorpaySecretKey.startsWith('test_') || process.env.VITE_RAZORPAY_KEY_ID?.startsWith('rzp_test_');
+    // Determine if test mode based on key ID
+    const isTestMode = razorpayKeyId?.startsWith('rzp_test_');
+
+    console.log('🔍 Payment Verification Details:', {
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      testMode: isTestMode,
+      keyIdConfigured: !!razorpayKeyId,
+      secretKeyConfigured: !!razorpaySecretKey
+    });
 
     if (isTestMode) {
       // In test mode, just verify that we have the required fields
       // Real signature verification would fail in test mode due to Razorpay's test signatures
-      console.log('Test mode payment verified:', { razorpay_order_id, razorpay_payment_id });
+      console.log('🧪 Test mode: Accepting test payment signature');
       return res.json({
         success: true,
         message: 'Payment verified successfully (Test Mode)',
@@ -557,11 +577,18 @@ app.post('/api/verify-payment', async (req: Request, res: Response) => {
     }
 
     // Production mode: verify signature
+    if (!razorpaySecretKey) {
+      console.error('❌ Razorpay Secret Key not configured for production mode');
+      return res.status(500).json({ error: 'Razorpay Secret Key not configured' });
+    }
+
+    console.log('🔒 Verifying production mode signature...');
     const hmac = crypto.createHmac('sha256', razorpaySecretKey);
     hmac.update(razorpay_order_id + '|' + razorpay_payment_id);
     const generated_signature = hmac.digest('hex');
 
     if (generated_signature === razorpay_signature) {
+      console.log('✅ Payment signature verified successfully');
       res.json({
         success: true,
         message: 'Payment verified successfully',
@@ -569,13 +596,17 @@ app.post('/api/verify-payment', async (req: Request, res: Response) => {
         paymentId: razorpay_payment_id
       });
     } else {
+      console.warn('❌ Payment verification failed - signature mismatch');
+      console.warn('Expected:', generated_signature);
+      console.warn('Received:', razorpay_signature);
       res.status(400).json({
         success: false,
         error: 'Payment verification failed - signature mismatch'
       });
     }
   } catch (error) {
-    console.error('Verify Payment Error:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('❌ Verify Payment Error:', errorMsg, error);
     res.status(500).json({ error: 'Failed to verify payment' });
   }
 });
