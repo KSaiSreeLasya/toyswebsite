@@ -95,7 +95,21 @@
 </head>
   <body class="funky-pattern">
     <div id="root"></div>
-  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js" async defer></script>
+  <script>
+    // Ensure Razorpay SDK is ready
+    window.__razorpayReady = false;
+    const checkRazorpay = setInterval(() => {
+      if (window.Razorpay) {
+        window.__razorpayReady = true;
+        console.log('Razorpay SDK loaded successfully');
+        clearInterval(checkRazorpay);
+      }
+    }, 100);
+
+    // Clear check after 10 seconds
+    setTimeout(() => clearInterval(checkRazorpay), 10000);
+  </script>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>
