@@ -32,7 +32,12 @@ const Cart: React.FC = () => {
     e.preventDefault();
 
     if (!shippingData.fullName || !shippingData.address || !shippingData.city || !shippingData.zipCode || !shippingData.phone) {
-      alert('Please fill in all shipping details');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Incomplete Information',
+        text: 'Please fill in all shipping details before proceeding',
+        confirmButtonColor: '#7c3aed'
+      });
       return;
     }
 
@@ -41,9 +46,32 @@ const Cart: React.FC = () => {
       const keyId = import.meta.env.VITE_RAZORPAY_KEY_ID;
 
       if (!keyId) {
-        throw new Error('Razorpay Key ID not configured');
+        const errorMsg = '⚠️ Razorpay Key ID is not configured. Please contact support to enable payments.';
+        console.error(errorMsg);
+        setIsProcessing(false);
+        Swal.fire({
+          icon: 'error',
+          title: 'Payment Configuration Missing',
+          html: `<p style="text-align: left;">${errorMsg}</p><p style="text-align: left; font-size: 0.85em; color: #666; margin-top: 10px;"><strong>Debug Info:</strong><br>VITE_RAZORPAY_KEY_ID is not set</p>`,
+          confirmButtonColor: '#7c3aed'
+        });
+        return;
       }
 
+      // Validate shipping phone number format
+      const phoneRegex = /^[0-9]{10}$/;
+      if (!phoneRegex.test(shippingData.phone.replace(/\D/g, ''))) {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Invalid Phone',
+          text: 'Please enter a valid 10-digit phone number',
+          confirmButtonColor: '#7c3aed'
+        });
+        setIsProcessing(false);
+        return;
+      }
+
+      console.log('📦 Creating Razorpay order...');
       const order = await createRazorpayOrder(
         total,
         `ORD-${Date.now()}`,
@@ -53,6 +81,12 @@ const Cart: React.FC = () => {
           shippingAddress: shippingData
         }
       );
+
+      if (!order || !order.id) {
+        throw new Error('Failed to create order on server');
+      }
+
+      console.log('✅ Order created:', order.id);
 
       const options = {
         key: keyId,
@@ -64,7 +98,7 @@ const Cart: React.FC = () => {
         prefill: {
           name: shippingData.fullName,
           contact: shippingData.phone,
-          email: user?.email
+          email: user?.email || ''
         },
         notes: {
           shippingAddress: shippingData.address,
@@ -74,12 +108,20 @@ const Cart: React.FC = () => {
         }
       };
 
+      console.log('🔐 Opening Razorpay payment modal...');
       let razorpayResponse;
       try {
         razorpayResponse = await openRazorpayCheckout(options);
       } catch (rzpError: any) {
         const errorMsg = rzpError?.message || 'Failed to open payment gateway';
-        console.error('Razorpay checkout error:', errorMsg, rzpError);
+        console.error('❌ Razorpay checkout error:', errorMsg);
+
+        // Check if it's an SDK loading issue
+        const winAny = window as any;
+        if (!winAny.Razorpay && !winAny.__razorpayReady) {
+          throw new Error('Payment SDK is not available. Please refresh the page and ensure you have a stable internet connection.');
+        }
+
         throw new Error(`Payment gateway error: ${errorMsg}`);
       }
 
@@ -87,7 +129,7 @@ const Cart: React.FC = () => {
         throw new Error('No payment response received from Razorpay');
       }
 
-      console.log('Payment completed, verifying with backend...');
+      console.log('✅ Payment completed, verifying with backend...');
 
       // Verify the payment with backend
       const isVerified = await verifyPayment({
@@ -97,9 +139,10 @@ const Cart: React.FC = () => {
       });
 
       if (!isVerified) {
-        throw new Error('Payment verification failed. Please contact support.');
+        throw new Error('Payment verification failed. Please contact support with your order ID.');
       }
 
+      console.log('✅ Payment verified, creating order...');
       // Only create order after payment is verified
       await placeOrder(useCoins ? coinsUsed : 0);
 
@@ -107,25 +150,46 @@ const Cart: React.FC = () => {
       setOrderComplete(true);
     } catch (error: any) {
       const errorMessage = error?.message || (typeof error === 'string' ? error : 'Payment failed. Please try again.');
-      console.error('Payment error:', errorMessage, error);
+      console.error('❌ Payment error:', errorMessage, error);
       setIsProcessing(false);
 
-      // Provide helpful error messages
+      // Provide helpful error messages based on the issue
       let userMessage = errorMessage;
+      let title = 'Payment Failed';
+
       if (errorMessage.includes('timeout')) {
         userMessage = 'Payment gateway took too long to respond. Please try again.';
+        title = 'Connection Timeout';
       } else if (errorMessage.includes('cancelled')) {
         userMessage = 'Payment was cancelled. You can try again when ready.';
-      } else if (errorMessage.includes('not loaded')) {
-        userMessage = 'Payment gateway is not available. Please refresh the page and try again.';
+        title = 'Payment Cancelled';
+      } else if (errorMessage.includes('not loaded') || errorMessage.includes('SDK')) {
+        userMessage = 'Payment gateway is loading. Please refresh the page and try again. If the problem persists, please check your internet connection.';
+        title = 'Payment Gateway Unavailable';
+      } else if (errorMessage.includes('iframe')) {
+        userMessage = 'Payments cannot be processed in this view. Please try a different browser or close any browser extensions.';
+        title = 'Payment View Issue';
+      } else if (errorMessage.includes('Missing required') || errorMessage.includes('Invalid')) {
+        userMessage = 'Payment configuration issue. Please refresh the page and try again.';
+        title = 'Configuration Error';
       }
 
       Swal.fire({
         icon: 'error',
-        title: 'Payment Issue',
+        title,
         text: userMessage,
         confirmButtonColor: '#7c3aed',
-        confirmButtonText: 'OK, Try Again'
+        confirmButtonText: 'Try Again',
+        didOpen: () => {
+          // Log error for debugging
+          const errorEl = document.querySelector('.swal2-text');
+          if (errorEl) {
+            const debugDiv = document.createElement('div');
+            debugDiv.style.cssText = 'font-size: 0.75em; color: #999; margin-top: 10px; text-align: left; font-family: monospace;';
+            debugDiv.textContent = `Debug: ${errorMessage.substring(0, 100)}`;
+            errorEl.parentElement?.appendChild(debugDiv);
+          }
+        }
       });
     }
   };
