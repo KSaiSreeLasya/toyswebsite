@@ -62,33 +62,35 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       })
     });
 
-    if (!response.ok) {
-      let errorMessage = 'Signup failed.';
-      try {
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const errorData = await response.json();
-          errorMessage = errorData?.error || errorMessage;
-        } else {
-          const text = await response.text();
-          if (text) {
-            console.warn('Non-JSON response:', text);
-            errorMessage = text.substring(0, 200);
-          }
-        }
-      } catch (parseError) {
-        console.warn('Could not parse error response:', parseError);
-      }
-      console.error('Signup error:', errorMessage);
-      return { success: false, error: errorMessage };
-    }
-
     let data;
     try {
-      data = await response.json();
+      const responseText = await response.text();
+
+      if (!responseText) {
+        return { success: false, error: 'Empty response from server' };
+      }
+
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        try {
+          data = JSON.parse(responseText);
+        } catch (jsonError) {
+          console.error('Failed to parse JSON response:', responseText);
+          return { success: false, error: 'Invalid server response. Please try again.' };
+        }
+      } else {
+        console.warn('Non-JSON response:', responseText);
+        return { success: false, error: responseText.substring(0, 200) };
+      }
     } catch (parseError) {
-      console.error('Failed to parse success response:', parseError);
-      return { success: false, error: 'Invalid server response. Please try again.' };
+      console.error('Could not parse response:', parseError);
+      return { success: false, error: 'Signup failed. Please try again.' };
+    }
+
+    if (!response.ok) {
+      const errorMessage = data?.error || 'Signup failed.';
+      console.error('Signup error:', errorMessage);
+      return { success: false, error: errorMessage };
     }
 
     console.log('Signup successful');
