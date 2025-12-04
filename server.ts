@@ -185,41 +185,58 @@ app.post('/api/signup', async (req: Request, res: Response) => {
   try {
     const { email, password, role = 'customer' } = req.body;
 
+    console.log('Signup request received for:', email);
+
     if (!email || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
     if (!supabaseAdmin) {
-      return res.status(500).json({ error: 'Supabase admin client not configured' });
+      console.error('Supabase admin not configured. URL:', !!supabaseUrl, 'Key:', !!supabaseServiceKey);
+      return res.status(500).json({ error: 'Supabase not configured. Contact server admin.' });
     }
 
     const emailLower = email.toLowerCase();
     const roleLower = role.toLowerCase();
 
     // Check if user already exists
-    const { data: existingUsers } = await supabaseAdmin
+    console.log('Checking if user exists:', emailLower);
+    const { data: existingUsers, error: checkError } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('email', emailLower);
+
+    if (checkError) {
+      console.error('Error checking existing user:', checkError.message);
+    }
 
     if (existingUsers && existingUsers.length > 0) {
       return res.status(400).json({ error: 'User with this email already exists' });
     }
 
     // Create auth user
+    console.log('Creating auth user for:', emailLower);
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: emailLower,
       password,
       email_confirm: true,
     });
 
-    if (authError || !authData.user) {
-      return res.status(400).json({ error: authError?.message || 'Failed to create auth user' });
+    if (authError) {
+      console.error('Auth creation error:', authError.message);
+      return res.status(400).json({ error: authError.message || 'Failed to create auth user' });
+    }
+
+    if (!authData?.user) {
+      console.error('No user returned from auth creation');
+      return res.status(400).json({ error: 'Failed to create auth user' });
     }
 
     const authUserId = authData.user.id;
+    console.log('Auth user created:', authUserId);
 
     // Create user profile
+    console.log('Creating user profile');
     const { error: insertError } = await supabaseAdmin
       .from('users')
       .insert({
@@ -230,9 +247,11 @@ app.post('/api/signup', async (req: Request, res: Response) => {
       });
 
     if (insertError) {
+      console.error('User profile creation error:', insertError.message);
       return res.status(400).json({ error: insertError.message || 'Failed to create user profile' });
     }
 
+    console.log('Signup successful for:', emailLower);
     res.json({
       success: true,
       message: 'Signup successful',
@@ -240,8 +259,9 @@ app.post('/api/signup', async (req: Request, res: Response) => {
       email: emailLower
     });
   } catch (error) {
-    console.error('Signup Error:', error);
-    res.status(500).json({ error: 'Signup failed. Please try again.' });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('Signup Error:', errorMsg, error);
+    res.status(500).json({ error: `Server error: ${errorMsg}` });
   }
 });
 
