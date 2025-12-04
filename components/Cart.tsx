@@ -106,14 +106,26 @@ const Cart: React.FC = () => {
       setIsProcessing(false);
       setOrderComplete(true);
     } catch (error: any) {
-      console.error('Payment error:', error);
-      setIsProcessing(false);
       const errorMessage = error?.message || (typeof error === 'string' ? error : 'Payment failed. Please try again.');
+      console.error('Payment error:', errorMessage, error);
+      setIsProcessing(false);
+
+      // Provide helpful error messages
+      let userMessage = errorMessage;
+      if (errorMessage.includes('timeout')) {
+        userMessage = 'Payment gateway took too long to respond. Please try again.';
+      } else if (errorMessage.includes('cancelled')) {
+        userMessage = 'Payment was cancelled. You can try again when ready.';
+      } else if (errorMessage.includes('not loaded')) {
+        userMessage = 'Payment gateway is not available. Please refresh the page and try again.';
+      }
+
       Swal.fire({
         icon: 'error',
-        title: 'Payment Failed',
-        text: errorMessage,
+        title: 'Payment Issue',
+        text: userMessage,
         confirmButtonColor: '#7c3aed',
+        confirmButtonText: 'OK, Try Again'
       });
     }
   };
