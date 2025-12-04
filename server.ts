@@ -71,7 +71,18 @@ const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+console.log('Server startup - Environment variables:');
+console.log('  VITE_SUPABASE_URL:', supabaseUrl ? '✓ Set' : '✗ Missing');
+console.log('  SUPABASE_SERVICE_ROLE_KEY:', supabaseServiceKey ? '✓ Set' : '✗ Missing');
+console.log('  VITE_RAZORPAY_KEY_ID:', process.env.VITE_RAZORPAY_KEY_ID ? '✓ Set' : '✗ Missing');
+
 const supabaseAdmin = supabaseServiceKey && supabaseUrl ? createClient(supabaseUrl, supabaseServiceKey) : null;
+
+if (!supabaseAdmin) {
+  console.error('❌ Supabase admin not initialized - signup will fail!');
+} else {
+  console.log('✅ Supabase admin client initialized');
+}
 
 interface GenerateDescriptionRequest {
   productName: string;
