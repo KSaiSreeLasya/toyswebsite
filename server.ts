@@ -3,6 +3,8 @@ import cors from 'cors';
 import { GoogleGenAI } from '@google/genai';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -49,6 +51,20 @@ app.use((req: Request, res: Response, next: Function) => {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   next();
+});
+
+// Serve static frontend files
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const distPath = path.join(__dirname, 'dist');
+
+// Serve static files from dist
+app.use(express.static(distPath));
+
+// SPA fallback: serve index.html for all non-API routes
+app.get('*', (req: Request, res: Response) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(distPath, 'index.html'));
+  }
 });
 
 const apiKey = process.env.GEMINI_API_KEY;
