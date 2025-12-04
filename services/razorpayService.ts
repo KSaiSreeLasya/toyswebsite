@@ -278,11 +278,45 @@ export const openRazorpayCheckout = (
       }
 
       console.log('🔓 Opening Razorpay payment modal...');
+
+      // In test mode, add a shorter timeout to detect if modal loads properly
+      // If it doesn't load within 5 seconds, we'll show a simulated payment instead
+      let modalLoadedSuccessfully = false;
+      let modalCheckTimeout: NodeJS.Timeout | null = null;
+
+      if (isTestMode) {
+        modalCheckTimeout = setTimeout(() => {
+          if (!isResolved && !modalLoadedSuccessfully && !handlerCalled) {
+            console.warn('⚠️ Razorpay modal did not respond within 5 seconds - may be stuck loading');
+            // Check if the modal is actually open by looking for Razorpay elements
+            const razorpayModal = document.querySelector('[data-testid="razorpay-modal"]') ||
+                                  document.querySelector('[class*="razorpay"]') ||
+                                  document.querySelector('iframe[src*="razorpay"]');
+
+            if (!razorpayModal) {
+              console.log('🧪 Modal did not load, generating mock response for test mode');
+              if (!isResolved) {
+                isResolved = true;
+                if (timeoutId) clearTimeout(timeoutId);
+                if (modalCheckTimeout) clearTimeout(modalCheckTimeout);
+                const mockResponse = generateMockPaymentResponse(options.order_id, options.amount);
+                return resolve(mockResponse);
+              }
+            }
+          }
+        }, 5000);
+      }
+
       try {
         rzp.open();
+        if (isTestMode) {
+          modalLoadedSuccessfully = true;
+        }
       } catch (openErr) {
         const errMsg = openErr instanceof Error ? openErr.message : String(openErr);
         console.error('❌ Failed to open Razorpay modal:', errMsg);
+
+        if (modalCheckTimeout) clearTimeout(modalCheckTimeout);
 
         // In test mode, generate mock response instead of failing
         if (isTestMode) {
@@ -297,10 +331,11 @@ export const openRazorpayCheckout = (
       }
 
       // Set timeout as fallback (shorter for test mode to avoid long waits)
-      const timeoutDuration = isTestMode ? 30000 : 60000; // 30 sec for test, 1 min for production
+      const timeoutDuration = isTestMode ? 35000 : 60000; // 35 sec for test, 1 min for production
       timeoutId = setTimeout(() => {
         if (!isResolved) {
           isResolved = true;
+          if (modalCheckTimeout) clearTimeout(modalCheckTimeout);
           console.warn(`⏱️ Razorpay checkout did not respond after ${timeoutDuration}ms`);
 
           // In test mode, auto-generate response on timeout
