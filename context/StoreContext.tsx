@@ -478,8 +478,9 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const tax = subtotal * 0.18;
     const total = Math.max(0, subtotal + tax - coinsUsed);
 
-    // Create order in Supabase or locally
-    const newOrder = await createOrderInDatabase(user.id, cart, total);
+    // Create order in Supabase or locally (convert to paise for storage)
+    const totalInPaise = Math.round(total * 100);
+    const newOrder = await createOrderInDatabase(user.id, cart, totalInPaise);
 
     if (newOrder) {
       // Update orders state
