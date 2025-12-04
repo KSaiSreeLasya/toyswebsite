@@ -43,7 +43,20 @@ export const createRazorpayOrder = async (
       })
     });
 
-    const data = await response.json();
+    let data;
+    try {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.warn('Response is not JSON:', text);
+        throw new Error('Invalid server response format');
+      }
+    } catch (parseError) {
+      const errorMsg = parseError instanceof Error ? parseError.message : 'Failed to parse response';
+      throw new Error(errorMsg);
+    }
 
     if (!response.ok) {
       const errorMessage = data.message || data.error || 'Failed to create Razorpay order';
