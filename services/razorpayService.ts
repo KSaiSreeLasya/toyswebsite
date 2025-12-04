@@ -129,7 +129,19 @@ export const verifyPayment = async (
       return false;
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        return false;
+      }
+    } catch (parseError) {
+      console.error('Failed to parse response:', parseError);
+      return false;
+    }
+
     return data.success;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
