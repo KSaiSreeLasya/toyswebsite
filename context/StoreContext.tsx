@@ -113,22 +113,38 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         if (storedPayment) setPaymentConfig(JSON.parse(storedPayment));
         if (storedAccounts) setUserAccounts(JSON.parse(storedAccounts));
 
-        // Load products from Supabase
+        // Seed products on first load (if empty)
         try {
           const dbProducts = await getProductsFromDatabase();
-          if (dbProducts.length > 0) {
+          if (dbProducts.length === 0) {
+            console.log('Database is empty, seeding products...');
+            const seedResponse = await fetch('/api/seed-products', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' }
+            });
+            if (seedResponse.ok) {
+              const seedData = await seedResponse.json();
+              console.log('Seed response:', seedData);
+              // Reload products after seeding
+              const reloadedProducts = await getProductsFromDatabase();
+              if (reloadedProducts.length > 0) {
+                setProducts(reloadedProducts);
+                localStorage.setItem('wl_products', JSON.stringify(reloadedProducts));
+              } else {
+                setProducts(INITIAL_PRODUCTS);
+                localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
+              }
+            } else {
+              console.error('Seed failed, using local products');
+              setProducts(INITIAL_PRODUCTS);
+              localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
+            }
+          } else {
             setProducts(dbProducts);
             localStorage.setItem('wl_products', JSON.stringify(dbProducts));
-          } else if (storedProducts) {
-            setProducts(JSON.parse(storedProducts));
-          } else {
-            // Sync initial products to database on first load
-            await syncProductsToDatabase(INITIAL_PRODUCTS);
-            setProducts(INITIAL_PRODUCTS);
-            localStorage.setItem('wl_products', JSON.stringify(INITIAL_PRODUCTS));
           }
         } catch (err) {
-          console.log('Error loading products from Supabase, using local:', err);
+          console.log('Error syncing products, using local:', err);
           if (storedProducts) {
             setProducts(JSON.parse(storedProducts));
           } else {
