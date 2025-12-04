@@ -10,9 +10,44 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Add Permissions-Policy header for payment gateway APIs
+// Add security headers for payment gateway APIs and content security
 app.use((req: Request, res: Response, next: Function) => {
-  res.setHeader('Permissions-Policy', 'payment=(*), publickey-credentials-get=(*), clipboard-write=(*), web-share=(*), otp-credentials=(*), publickey-credentials-create=(*)');
+  // Permissions Policy for payment and credential features
+  // Using * (wildcard) to allow payment in all contexts (including iframes)
+  res.setHeader(
+    'Permissions-Policy',
+    'payment=*, publickey-credentials-get=*, clipboard-write=*, web-share=*, otp-credentials=*, publickey-credentials-create=*, camera=(), microphone=(), geolocation=()'
+  );
+
+  // Content Security Policy for Razorpay and trusted sources
+  const cspHeader = [
+    "default-src 'self' https:",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.tailwindcss.com https://fonts.googleapis.com https://aistudiocdn.com https://api.razorpay.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com https://checkout.razorpay.com",
+    "img-src 'self' data: https: http:",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.razorpay.com wss: ws:",
+    "frame-src 'self' https://checkout.razorpay.com https://*.razorpay.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self' https://razorpay.com https://*.razorpay.com"
+  ].join('; ');
+
+  res.setHeader('Content-Security-Policy', cspHeader);
+
+  // Additional security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  // Allow embedding in iframes for Razorpay payment flow
+  res.setHeader('X-Frame-Options', 'ALLOWALL');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
+
+  // CORS headers for Razorpay API
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
   next();
 });
 
@@ -190,7 +225,13 @@ app.post('/api/setup-admin', async (req: Request, res: Response) => {
 app.post('/api/seed-products', async (req: Request, res: Response) => {
   try {
     if (!supabaseAdmin) {
-      return res.status(500).json({ error: 'Supabase admin client not configured' });
+      console.warn('⚠️ Supabase not configured - seeding skipped. App will use local products.');
+      return res.json({
+        success: true,
+        message: 'Supabase not configured. Using local products.',
+        skipped: true,
+        count: 0
+      });
     }
 
     const INITIAL_PRODUCTS = [
@@ -467,14 +508,35 @@ app.post('/api/create-order', async (req: Request, res: Response) => {
   try {
     const { amount, currency, receipt, notes } = req.body;
 
-    if (!amount || !currency || !receipt) {
-      return res.status(400).json({ error: 'Missing amount, currency, or receipt' });
+    // Validate required fields
+    if (!amount) {
+      console.warn('⚠️ Missing amount in create-order request');
+      return res.status(400).json({ error: 'Missing amount' });
     }
 
-    const razorpaySecretKey = process.env.VITE_RAZORPAY_SECRET_KEY;
-    if (!razorpaySecretKey) {
-      return res.status(500).json({ error: 'Razorpay Secret Key not configured' });
+    if (!currency) {
+      console.warn('⚠️ Missing currency in create-order request');
+      return res.status(400).json({ error: 'Missing currency' });
     }
+
+    if (!receipt) {
+      console.warn('⚠️ Missing receipt in create-order request');
+      return res.status(400).json({ error: 'Missing receipt' });
+    }
+
+    // Validate amount is a positive number (in paise)
+    if (typeof amount !== 'number' || amount <= 0) {
+      console.warn('⚠️ Invalid amount:', amount);
+      return res.status(400).json({ error: 'Amount must be a positive number (in paise)' });
+    }
+
+    // Validate currency format (3 letters)
+    if (typeof currency !== 'string' || currency.length !== 3) {
+      console.warn('⚠️ Invalid currency:', currency);
+      return res.status(400).json({ error: 'Currency must be a 3-letter code (e.g., INR)' });
+    }
+
+    console.log('📦 Creating order:', { amount, currency, receipt: receipt.substring(0, 20) + '...' });
 
     // Use timestamp-based order ID that's compatible with Razorpay test mode
     const orderId = `order_${Date.now()}_${Math.floor(Math.random() * 1000000).toString()}`;
@@ -482,7 +544,7 @@ app.post('/api/create-order', async (req: Request, res: Response) => {
     const orderData = {
       id: orderId,
       entity: 'order',
-      amount: Math.floor(amount), // Ensure integer
+      amount: Math.floor(amount), // Ensure integer (in paise)
       amount_paid: 0,
       amount_due: Math.floor(amount),
       currency: currency.toUpperCase(),
@@ -493,11 +555,17 @@ app.post('/api/create-order', async (req: Request, res: Response) => {
       created_at: Math.floor(Date.now() / 1000)
     };
 
-    console.log('Created order:', orderData);
+    console.log('✅ Order created successfully:', {
+      orderId: orderData.id,
+      amount: `${orderData.amount / 100} ${orderData.currency}`,
+      receipt
+    });
+
     res.json(orderData);
   } catch (error) {
-    console.error('Create Order Error:', error);
-    res.status(500).json({ error: 'Failed to create order' });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('❌ Create Order Error:', errorMsg, error);
+    res.status(500).json({ error: 'Failed to create order. Please try again.' });
   }
 });
 
@@ -505,22 +573,42 @@ app.post('/api/verify-payment', async (req: Request, res: Response) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-      return res.status(400).json({ error: 'Missing payment verification details' });
+    console.log('🔐 Verifying payment...');
+
+    // Validate required fields
+    if (!razorpay_order_id) {
+      console.warn('⚠️ Missing razorpay_order_id');
+      return res.status(400).json({ error: 'Missing razorpay_order_id' });
     }
 
+    if (!razorpay_payment_id) {
+      console.warn('⚠️ Missing razorpay_payment_id');
+      return res.status(400).json({ error: 'Missing razorpay_payment_id' });
+    }
+
+    if (!razorpay_signature) {
+      console.warn('⚠️ Missing razorpay_signature');
+      return res.status(400).json({ error: 'Missing razorpay_signature' });
+    }
+
+    const razorpayKeyId = process.env.VITE_RAZORPAY_KEY_ID;
     const razorpaySecretKey = process.env.VITE_RAZORPAY_SECRET_KEY;
-    if (!razorpaySecretKey) {
-      return res.status(500).json({ error: 'Razorpay Secret Key not configured' });
-    }
 
-    // For test mode (rzp_test_ keys), accept test signatures
-    const isTestMode = razorpaySecretKey.startsWith('test_') || process.env.VITE_RAZORPAY_KEY_ID?.startsWith('rzp_test_');
+    // Determine if test mode based on key ID
+    const isTestMode = razorpayKeyId?.startsWith('rzp_test_');
+
+    console.log('🔍 Payment Verification Details:', {
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      testMode: isTestMode,
+      keyIdConfigured: !!razorpayKeyId,
+      secretKeyConfigured: !!razorpaySecretKey
+    });
 
     if (isTestMode) {
       // In test mode, just verify that we have the required fields
       // Real signature verification would fail in test mode due to Razorpay's test signatures
-      console.log('Test mode payment verified:', { razorpay_order_id, razorpay_payment_id });
+      console.log('🧪 Test mode: Accepting test payment signature');
       return res.json({
         success: true,
         message: 'Payment verified successfully (Test Mode)',
@@ -530,11 +618,18 @@ app.post('/api/verify-payment', async (req: Request, res: Response) => {
     }
 
     // Production mode: verify signature
+    if (!razorpaySecretKey) {
+      console.error('❌ Razorpay Secret Key not configured for production mode');
+      return res.status(500).json({ error: 'Razorpay Secret Key not configured' });
+    }
+
+    console.log('🔒 Verifying production mode signature...');
     const hmac = crypto.createHmac('sha256', razorpaySecretKey);
     hmac.update(razorpay_order_id + '|' + razorpay_payment_id);
     const generated_signature = hmac.digest('hex');
 
     if (generated_signature === razorpay_signature) {
+      console.log('✅ Payment signature verified successfully');
       res.json({
         success: true,
         message: 'Payment verified successfully',
@@ -542,24 +637,47 @@ app.post('/api/verify-payment', async (req: Request, res: Response) => {
         paymentId: razorpay_payment_id
       });
     } else {
+      console.warn('❌ Payment verification failed - signature mismatch');
+      console.warn('Expected:', generated_signature);
+      console.warn('Received:', razorpay_signature);
       res.status(400).json({
         success: false,
         error: 'Payment verification failed - signature mismatch'
       });
     }
   } catch (error) {
-    console.error('Verify Payment Error:', error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('❌ Verify Payment Error:', errorMsg, error);
     res.status(500).json({ error: 'Failed to verify payment' });
   }
 });
 
 app.get('/api/health', (req: Request, res: Response) => {
+  const razorpayKeyId = process.env.VITE_RAZORPAY_KEY_ID;
+  const razorpaySecretKey = process.env.VITE_RAZORPAY_SECRET_KEY;
+  const isTestMode = razorpayKeyId?.startsWith('rzp_test_');
+
   res.json({
     status: 'ok',
-    apiKeyConfigured: !!apiKey,
-    supabaseConfigured: !!supabaseAdmin,
-    razorpayConfigured: !!(process.env.VITE_RAZORPAY_KEY_ID && process.env.VITE_RAZORPAY_SECRET_KEY),
-    message: 'API is ready with Razorpay integration'
+    server: 'running',
+    timestamp: new Date().toISOString(),
+    configuration: {
+      geminiApiKey: !!apiKey,
+      supabase: !!supabaseAdmin,
+      razorpay: {
+        keyIdConfigured: !!razorpayKeyId,
+        secretKeyConfigured: !!razorpaySecretKey,
+        testMode: isTestMode,
+        mode: isTestMode ? 'TEST' : 'PRODUCTION'
+      }
+    },
+    warnings: [
+      !apiKey && '⚠️ GEMINI_API_KEY not configured - AI features disabled',
+      !supabaseAdmin && '⚠️ Supabase not configured - database features disabled',
+      !razorpayKeyId && '⚠️ VITE_RAZORPAY_KEY_ID not configured - payments disabled',
+      isTestMode && '🧪 Razorpay in TEST mode - use test cards for payments'
+    ].filter(Boolean),
+    message: 'API server is ready'
   });
 });
 

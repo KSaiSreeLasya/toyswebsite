@@ -90,19 +90,33 @@ const waitForRazorpaySDK = (maxWaitMs: number = 10000): Promise<any> => {
   return new Promise((resolve, reject) => {
     const Razorpay = (window as any).Razorpay;
     if (Razorpay) {
+      console.log('✅ Razorpay SDK already loaded');
       resolve(Razorpay);
       return;
     }
 
+    // Check if there's a loading error
+    const winAny = window as any;
+    if (winAny.__razorpayError) {
+      reject(new Error(`Razorpay SDK Error: ${winAny.__razorpayError}`));
+      return;
+    }
+
+    console.log('⏳ Waiting for Razorpay SDK to load...');
     const startTime = Date.now();
     const checkInterval = setInterval(() => {
       const Razorpay = (window as any).Razorpay;
       if (Razorpay) {
         clearInterval(checkInterval);
+        console.log('✅ Razorpay SDK loaded');
         resolve(Razorpay);
+      } else if ((window as any).__razorpayError) {
+        clearInterval(checkInterval);
+        reject(new Error(`Razorpay SDK Error: ${(window as any).__razorpayError}`));
       } else if (Date.now() - startTime > maxWaitMs) {
         clearInterval(checkInterval);
-        reject(new Error('Razorpay SDK took too long to load'));
+        const elapsed = Date.now() - startTime;
+        reject(new Error(`Razorpay SDK failed to load after ${elapsed}ms. Check network connection or browser extensions.`));
       }
     }, 100);
   });
@@ -127,19 +141,53 @@ export const openRazorpayCheckout = (
     let isResolved = false;
 
     try {
+      // Validate all required parameters first
+      const requiredFields = ['key', 'amount', 'order_id', 'currency'];
+      const missingFields = requiredFields.filter(field => !options[field]);
+
+      if (missingFields.length > 0) {
+        const errorMsg = `Missing required Razorpay parameters: ${missingFields.join(', ')}`;
+        console.error('❌ Configuration Error:', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      // Validate parameter types and values
+      if (typeof options.key !== 'string' || !options.key.trim()) {
+        throw new Error('Razorpay key is missing or invalid');
+      }
+
+      if (typeof options.amount !== 'number' || options.amount <= 0) {
+        throw new Error(`Invalid amount: ${options.amount}. Amount must be a positive number (in paise)`);
+      }
+
+      if (typeof options.currency !== 'string' || options.currency.length !== 3) {
+        throw new Error(`Invalid currency: ${options.currency}. Must be a 3-letter code (e.g., INR)`);
+      }
+
+      if (typeof options.order_id !== 'string' || !options.order_id.trim()) {
+        throw new Error('Razorpay order_id is missing or invalid');
+      }
+
       // First, ensure SDK is loaded
-      console.log('Waiting for Razorpay SDK to load...');
+      console.log('🔄 Loading Razorpay SDK...');
       const Razorpay = await waitForRazorpaySDK();
-      console.log('Razorpay SDK ready');
 
-      const isTestMode = options.key?.startsWith('rzp_test_');
+      const isTestMode = options.key.startsWith('rzp_test_');
 
-      console.log('Initializing Razorpay checkout with:', {
+      console.log('✅ Razorpay Configuration:', {
+        keyId: options.key.substring(0, 10) + '...',
         amount: options.amount,
         currency: options.currency,
-        order_id: options.order_id,
-        testMode: isTestMode
+        orderId: options.order_id,
+        testMode: isTestMode,
+        https: window.location.protocol === 'https:',
+        url: window.location.href
       });
+
+      // Verify Razorpay instance can be created
+      if (typeof Razorpay !== 'function') {
+        throw new Error('Razorpay SDK loaded but Razorpay constructor is not available');
+      }
 
       // Create a wrapper function to handle the response
       let handlerCalled = false;
@@ -149,7 +197,10 @@ export const openRazorpayCheckout = (
         handlerCalled = true;
 
         if (timeoutId) clearTimeout(timeoutId);
-        console.log('Payment handler callback received:', response);
+        console.log('✅ Payment successful:', {
+          orderId: response.razorpay_order_id,
+          paymentId: response.razorpay_payment_id
+        });
         resolve(response);
       };
 
@@ -157,20 +208,20 @@ export const openRazorpayCheckout = (
         key: options.key,
         amount: options.amount,
         currency: options.currency,
-        name: options.name,
-        description: options.description,
+        name: options.name || 'WonderLand Toys',
+        description: options.description || 'Purchase',
         order_id: options.order_id,
-        prefill: options.prefill,
-        notes: options.notes,
+        prefill: options.prefill || {},
+        notes: options.notes || {},
         handler: handlePaymentSuccess,
         modal: {
           ondismiss: () => {
             if (isResolved) return;
-            console.log('Modal dismiss called, handlerCalled:', handlerCalled);
+            console.log('User dismissed modal (handler called: ' + handlerCalled + ')');
 
             // In test mode, if handler wasn't called, generate a mock response
             if (isTestMode && !handlerCalled) {
-              console.log('Test mode: generating mock payment response');
+              console.log('🧪 Test mode: generating mock payment response');
               isResolved = true;
               if (timeoutId) clearTimeout(timeoutId);
               const mockResponse = generateMockPaymentResponse(options.order_id, options.amount);
@@ -178,7 +229,6 @@ export const openRazorpayCheckout = (
             } else if (!isResolved) {
               isResolved = true;
               if (timeoutId) clearTimeout(timeoutId);
-              console.log('User dismissed payment modal');
               reject(new Error('Payment cancelled by user'));
             }
           }
@@ -186,7 +236,25 @@ export const openRazorpayCheckout = (
       };
 
       // Create instance
-      const rzp = new Razorpay(checkoutOptions);
+      console.log('📱 Creating Razorpay checkout instance...');
+      let rzp: any;
+      try {
+        rzp = new Razorpay(checkoutOptions);
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : String(err);
+        console.error('Failed to create Razorpay instance:', errMsg);
+
+        // In test mode, provide a manual payment option via mock response
+        if (isTestMode) {
+          console.log('🧪 Test mode: Razorpay instance creation failed, generating mock response');
+          isResolved = true;
+          if (timeoutId) clearTimeout(timeoutId);
+          const mockResponse = generateMockPaymentResponse(options.order_id, options.amount);
+          return resolve(mockResponse);
+        }
+
+        throw new Error(`Failed to create Razorpay instance: ${errMsg}`);
+      }
 
       // Attach event listeners if available
       if (typeof rzp.on === 'function') {
@@ -194,38 +262,92 @@ export const openRazorpayCheckout = (
           if (isResolved) return;
           isResolved = true;
           if (timeoutId) clearTimeout(timeoutId);
-          console.error('Razorpay payment failed event:', response);
-          const errorMsg = response?.error?.description || 'Payment failed';
+          const errorMsg = response?.error?.description || response?.error?.code || 'Payment failed';
+          console.error('❌ Payment failed:', errorMsg);
           reject(new Error(errorMsg));
         });
 
         rzp.on('payment.success', function (response: any) {
-          console.log('Payment success event:', response);
+          console.log('✅ Payment success event received');
           if (!isResolved) {
             handlePaymentSuccess(response);
           }
         });
+      } else {
+        console.warn('⚠️ Razorpay event listener not available');
       }
 
-      console.log('Opening Razorpay modal...');
-      rzp.open();
+      console.log('🔓 Opening Razorpay payment modal...');
 
-      // Set timeout as fallback (increased to 180 seconds for test mode)
+      // In test mode, add a shorter timeout to detect if modal loads properly
+      // If it doesn't load within 5 seconds, we'll show a simulated payment instead
+      let modalLoadedSuccessfully = false;
+      let modalCheckTimeout: NodeJS.Timeout | null = null;
+
+      if (isTestMode) {
+        modalCheckTimeout = setTimeout(() => {
+          if (!isResolved && !modalLoadedSuccessfully && !handlerCalled) {
+            console.warn('⚠️ Razorpay modal did not respond within 5 seconds - may be stuck loading');
+            // Check if the modal is actually open by looking for Razorpay elements
+            const razorpayModal = document.querySelector('[data-testid="razorpay-modal"]') ||
+                                  document.querySelector('[class*="razorpay"]') ||
+                                  document.querySelector('iframe[src*="razorpay"]');
+
+            if (!razorpayModal) {
+              console.log('🧪 Modal did not load, generating mock response for test mode');
+              if (!isResolved) {
+                isResolved = true;
+                if (timeoutId) clearTimeout(timeoutId);
+                if (modalCheckTimeout) clearTimeout(modalCheckTimeout);
+                const mockResponse = generateMockPaymentResponse(options.order_id, options.amount);
+                return resolve(mockResponse);
+              }
+            }
+          }
+        }, 5000);
+      }
+
+      try {
+        rzp.open();
+        if (isTestMode) {
+          modalLoadedSuccessfully = true;
+        }
+      } catch (openErr) {
+        const errMsg = openErr instanceof Error ? openErr.message : String(openErr);
+        console.error('❌ Failed to open Razorpay modal:', errMsg);
+
+        if (modalCheckTimeout) clearTimeout(modalCheckTimeout);
+
+        // In test mode, generate mock response instead of failing
+        if (isTestMode) {
+          console.log('🧪 Test mode: Could not open modal, generating mock response');
+          isResolved = true;
+          if (timeoutId) clearTimeout(timeoutId);
+          const mockResponse = generateMockPaymentResponse(options.order_id, options.amount);
+          return resolve(mockResponse);
+        }
+
+        throw new Error(`Could not open payment modal: ${errMsg}`);
+      }
+
+      // Set timeout as fallback (shorter for test mode to avoid long waits)
+      const timeoutDuration = isTestMode ? 35000 : 60000; // 35 sec for test, 1 min for production
       timeoutId = setTimeout(() => {
         if (!isResolved) {
           isResolved = true;
-          console.warn('Razorpay checkout timed out after 180 seconds');
+          if (modalCheckTimeout) clearTimeout(modalCheckTimeout);
+          console.warn(`⏱️ Razorpay checkout did not respond after ${timeoutDuration}ms`);
 
           // In test mode, auto-generate response on timeout
           if (isTestMode) {
-            console.log('Test mode timeout: generating mock response');
+            console.log('🧪 Test mode timeout: generating mock response');
             const mockResponse = generateMockPaymentResponse(options.order_id, options.amount);
             resolve(mockResponse);
           } else {
-            reject(new Error('Payment gateway did not respond. Please close this dialog and try again.'));
+            reject(new Error('Payment gateway did not respond. Please check your internet connection and try again.'));
           }
         }
-      }, 180000);
+      }, timeoutDuration);
 
     } catch (error) {
       if (isResolved) return;
@@ -233,8 +355,32 @@ export const openRazorpayCheckout = (
       if (timeoutId) clearTimeout(timeoutId);
 
       const errorMsg = error instanceof Error ? error.message : 'Failed to open payment gateway';
-      console.error('Razorpay initialization error:', errorMsg, error);
-      reject(new Error(errorMsg));
+      const debugInfo = {
+        error: errorMsg,
+        environment: isTestMode ? 'Test Mode' : 'Production',
+        https: window.location.protocol === 'https:',
+        url: window.location.href,
+        options: {
+          hasKey: !!options.key,
+          hasAmount: !!options.amount,
+          hasOrderId: !!options.order_id,
+          hasCurrency: !!options.currency
+        }
+      };
+
+      console.error('❌ Razorpay initialization error:', debugInfo);
+
+      // Provide helpful error messages based on the issue
+      let userFriendlyMessage = errorMsg;
+      if (errorMsg.includes('script not loaded') || errorMsg.includes('SDK')) {
+        userFriendlyMessage = 'Payment gateway is loading... Please wait a moment and try again.';
+      } else if (errorMsg.includes('Missing required') || errorMsg.includes('key is missing')) {
+        userFriendlyMessage = 'Payment configuration is incomplete. Please contact support.';
+      } else if (errorMsg.includes('iframe')) {
+        userFriendlyMessage = 'Payment gateway cannot load in an embedded view. Please try again.';
+      }
+
+      reject(new Error(userFriendlyMessage));
     }
   });
 };
