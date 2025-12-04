@@ -49,57 +49,28 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
 
     console.log('Attempting signup for:', emailLower);
 
-    // Check if user already exists in users table
-    const { data: existingUser, error: checkError } = await supabase
-      .from('users')
-      .select('id')
-      .eq('email', emailLower);
-
-    if (checkError) {
-      console.error('Check user error:', checkError?.message || 'Unknown error');
-    }
-
-    if (existingUser && existingUser.length > 0) {
-      return { success: false, error: 'An account with this email already exists.' };
-    }
-
-    // Create auth user
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: emailLower,
-      password,
+    // Call backend signup endpoint
+    const response = await fetch('/api/signup', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: emailLower,
+        password,
+        role: roleLower,
+      })
     });
 
-    if (authError) {
-      console.error('Signup auth error:', authError?.message || 'Unknown auth error');
-      return { success: false, error: authError.message || 'Signup failed.' };
-    }
+    const data = await response.json();
 
-    if (!authData?.user) {
-      return { success: false, error: 'Signup failed: No user created.' };
-    }
-
-    const authUserId = authData.user.id;
-    console.log('Auth signup successful, creating user profile');
-
-    // Insert user record in users table
-    const { data: newUser, error: insertError } = await supabase
-      .from('users')
-      .insert({
-        id: authUserId,
-        email: emailLower,
-        role: roleLower,
-        name: emailLower.split('@')[0],
-      })
-      .select()
-      .single();
-
-    if (insertError) {
-      console.error('Insert user error:', insertError?.message || 'Unknown insert error');
-      return { success: false, error: insertError.message || 'Failed to create user profile.' };
+    if (!response.ok) {
+      console.error('Signup error:', data.error);
+      return { success: false, error: data.error || 'Signup failed.' };
     }
 
     console.log('Signup successful');
-    return { success: true, user: { ...newUser, id: authUserId } };
+    return { success: true, user: { email: emailLower, role: roleLower, name: emailLower.split('@')[0] } };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
     console.error('Signup exception:', errorMsg);
