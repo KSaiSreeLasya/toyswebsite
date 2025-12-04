@@ -242,6 +242,17 @@ export const openRazorpayCheckout = (
         rzp = new Razorpay(checkoutOptions);
       } catch (err) {
         const errMsg = err instanceof Error ? err.message : String(err);
+        console.error('Failed to create Razorpay instance:', errMsg);
+
+        // In test mode, provide a manual payment option via mock response
+        if (isTestMode) {
+          console.log('🧪 Test mode: Razorpay instance creation failed, generating mock response');
+          isResolved = true;
+          if (timeoutId) clearTimeout(timeoutId);
+          const mockResponse = generateMockPaymentResponse(options.order_id, options.amount);
+          return resolve(mockResponse);
+        }
+
         throw new Error(`Failed to create Razorpay instance: ${errMsg}`);
       }
 
@@ -267,14 +278,30 @@ export const openRazorpayCheckout = (
       }
 
       console.log('🔓 Opening Razorpay payment modal...');
-      rzp.open();
+      try {
+        rzp.open();
+      } catch (openErr) {
+        const errMsg = openErr instanceof Error ? openErr.message : String(openErr);
+        console.error('❌ Failed to open Razorpay modal:', errMsg);
 
-      // Set timeout as fallback
-      const timeoutDuration = isTestMode ? 180000 : 60000; // 3 min for test, 1 min for production
+        // In test mode, generate mock response instead of failing
+        if (isTestMode) {
+          console.log('🧪 Test mode: Could not open modal, generating mock response');
+          isResolved = true;
+          if (timeoutId) clearTimeout(timeoutId);
+          const mockResponse = generateMockPaymentResponse(options.order_id, options.amount);
+          return resolve(mockResponse);
+        }
+
+        throw new Error(`Could not open payment modal: ${errMsg}`);
+      }
+
+      // Set timeout as fallback (shorter for test mode to avoid long waits)
+      const timeoutDuration = isTestMode ? 30000 : 60000; // 30 sec for test, 1 min for production
       timeoutId = setTimeout(() => {
         if (!isResolved) {
           isResolved = true;
-          console.warn(`⏱️ Razorpay checkout timed out after ${timeoutDuration}ms`);
+          console.warn(`⏱️ Razorpay checkout did not respond after ${timeoutDuration}ms`);
 
           // In test mode, auto-generate response on timeout
           if (isTestMode) {
@@ -282,7 +309,7 @@ export const openRazorpayCheckout = (
             const mockResponse = generateMockPaymentResponse(options.order_id, options.amount);
             resolve(mockResponse);
           } else {
-            reject(new Error('Payment gateway did not respond within timeout. Please try again.'));
+            reject(new Error('Payment gateway did not respond. Please check your internet connection and try again.'));
           }
         }
       }, timeoutDuration);
