@@ -97,36 +97,64 @@ export const openRazorpayCheckout = (
     }
 
     try {
+      // Check if in test mode
+      const isTestMode = options.key?.startsWith('rzp_test_');
+
       const checkoutOptions = {
         ...options,
-        handler: function (response: RazorpayPaymentVerification) {
-          console.log('Payment response received:', response);
-          resolve(response);
-        },
+        // Force modal mode for better test compatibility
         modal: {
           ondismiss: () => {
             console.log('Payment modal dismissed');
             reject(new Error('Payment cancelled'));
-          }
+          },
+          confirm_close: true,
+          escape: true
+        },
+        handler: function (response: RazorpayPaymentVerification) {
+          console.log('Payment response received:', response);
+          resolve(response);
         }
       };
 
-      console.log('Opening Razorpay checkout with options:', {
-        key: checkoutOptions.key,
-        amount: checkoutOptions.amount,
-        order_id: checkoutOptions.order_id
-      });
+      // In test mode, add extra debugging and disable certain features
+      if (isTestMode) {
+        console.log('Opening Razorpay in TEST MODE with options:', {
+          key: checkoutOptions.key,
+          amount: checkoutOptions.amount,
+          order_id: checkoutOptions.order_id,
+          currency: checkoutOptions.currency
+        });
+      }
 
       const rzp = new Razorpay(checkoutOptions);
+
+      // Add error handler if available
+      if (typeof rzp.on === 'function') {
+        rzp.on('payment.failed', function (response: any) {
+          console.error('Payment failed:', response.error);
+          reject(new Error(response.error?.description || 'Payment failed'));
+        });
+
+        rzp.on('payment.authorized', function (response: any) {
+          console.log('Payment authorized:', response);
+        });
+      }
+
       rzp.open();
 
-      // Add timeout fallback - if checkout doesn't respond in 30 seconds, reject
+      // Add timeout fallback - if checkout doesn't respond in 45 seconds, reject
       const timeout = setTimeout(() => {
-        reject(new Error('Payment gateway timeout. Please try again.'));
-      }, 30000);
+        reject(new Error('Payment gateway timeout. Please try again or refresh the page.'));
+      }, 45000);
 
       // Clear timeout when promise resolves or rejects
-      Promise.resolve(rzp).catch(() => clearTimeout(timeout));
+      const originalResolve = resolve;
+      const originalReject = reject;
+
+      (window as any).__razorpayCleanup = () => {
+        clearTimeout(timeout);
+      };
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Failed to open Razorpay checkout';
       console.error('Razorpay initialization error:', errorMsg, error);
