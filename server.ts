@@ -467,14 +467,35 @@ app.post('/api/create-order', async (req: Request, res: Response) => {
   try {
     const { amount, currency, receipt, notes } = req.body;
 
-    if (!amount || !currency || !receipt) {
-      return res.status(400).json({ error: 'Missing amount, currency, or receipt' });
+    // Validate required fields
+    if (!amount) {
+      console.warn('⚠️ Missing amount in create-order request');
+      return res.status(400).json({ error: 'Missing amount' });
     }
 
-    const razorpaySecretKey = process.env.VITE_RAZORPAY_SECRET_KEY;
-    if (!razorpaySecretKey) {
-      return res.status(500).json({ error: 'Razorpay Secret Key not configured' });
+    if (!currency) {
+      console.warn('⚠️ Missing currency in create-order request');
+      return res.status(400).json({ error: 'Missing currency' });
     }
+
+    if (!receipt) {
+      console.warn('⚠️ Missing receipt in create-order request');
+      return res.status(400).json({ error: 'Missing receipt' });
+    }
+
+    // Validate amount is a positive number (in paise)
+    if (typeof amount !== 'number' || amount <= 0) {
+      console.warn('⚠️ Invalid amount:', amount);
+      return res.status(400).json({ error: 'Amount must be a positive number (in paise)' });
+    }
+
+    // Validate currency format (3 letters)
+    if (typeof currency !== 'string' || currency.length !== 3) {
+      console.warn('⚠️ Invalid currency:', currency);
+      return res.status(400).json({ error: 'Currency must be a 3-letter code (e.g., INR)' });
+    }
+
+    console.log('📦 Creating order:', { amount, currency, receipt: receipt.substring(0, 20) + '...' });
 
     // Use timestamp-based order ID that's compatible with Razorpay test mode
     const orderId = `order_${Date.now()}_${Math.floor(Math.random() * 1000000).toString()}`;
@@ -482,7 +503,7 @@ app.post('/api/create-order', async (req: Request, res: Response) => {
     const orderData = {
       id: orderId,
       entity: 'order',
-      amount: Math.floor(amount), // Ensure integer
+      amount: Math.floor(amount), // Ensure integer (in paise)
       amount_paid: 0,
       amount_due: Math.floor(amount),
       currency: currency.toUpperCase(),
@@ -493,11 +514,17 @@ app.post('/api/create-order', async (req: Request, res: Response) => {
       created_at: Math.floor(Date.now() / 1000)
     };
 
-    console.log('Created order:', orderData);
+    console.log('✅ Order created successfully:', {
+      orderId: orderData.id,
+      amount: `${orderData.amount / 100} ${orderData.currency}`,
+      receipt
+    });
+
     res.json(orderData);
   } catch (error) {
-    console.error('Create Order Error:', error);
-    res.status(500).json({ error: 'Failed to create order' });
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('❌ Create Order Error:', errorMsg, error);
+    res.status(500).json({ error: 'Failed to create order. Please try again.' });
   }
 });
 
