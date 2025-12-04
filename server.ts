@@ -13,35 +13,40 @@ app.use(express.json());
 // Add security headers for payment gateway APIs and content security
 app.use((req: Request, res: Response, next: Function) => {
   // Permissions Policy for payment and credential features
+  // Using * (wildcard) to allow payment in all contexts (including iframes)
   res.setHeader(
     'Permissions-Policy',
-    'payment=(*), publickey-credentials-get=(*), clipboard-write=(*), web-share=(*), otp-credentials=(*), publickey-credentials-create=(*), camera=(), microphone=(), geolocation=()'
+    'payment=*, publickey-credentials-get=*, clipboard-write=*, web-share=*, otp-credentials=*, publickey-credentials-create=*, camera=(), microphone=(), geolocation=()'
   );
 
   // Content Security Policy for Razorpay and trusted sources
   const cspHeader = [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.tailwindcss.com https://fonts.googleapis.com https://aistudiocdn.com",
-    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
+    "default-src 'self' https:",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.tailwindcss.com https://fonts.googleapis.com https://aistudiocdn.com https://api.razorpay.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com https://checkout.razorpay.com",
     "img-src 'self' data: https: http:",
     "font-src 'self' https://fonts.gstatic.com data:",
-    "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com wss: ws:",
-    "frame-src 'self' https://checkout.razorpay.com",
+    "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.razorpay.com wss: ws:",
+    "frame-src 'self' https://checkout.razorpay.com https://*.razorpay.com",
     "object-src 'none'",
     "base-uri 'self'",
-    "form-action 'self'"
+    "form-action 'self' https://razorpay.com https://*.razorpay.com"
   ].join('; ');
 
   res.setHeader('Content-Security-Policy', cspHeader);
 
   // Additional security headers
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  // Allow embedding in iframes for Razorpay payment flow
+  res.setHeader('X-Frame-Options', 'ALLOWALL');
   res.setHeader('X-XSS-Protection', '1; mode=block');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Referrer-Policy', 'no-referrer-when-downgrade');
 
-  // Allow Razorpay requests
+  // CORS headers for Razorpay API
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
   next();
 });
