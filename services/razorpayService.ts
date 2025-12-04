@@ -293,8 +293,32 @@ export const openRazorpayCheckout = (
       if (timeoutId) clearTimeout(timeoutId);
 
       const errorMsg = error instanceof Error ? error.message : 'Failed to open payment gateway';
-      console.error('Razorpay initialization error:', errorMsg, error);
-      reject(new Error(errorMsg));
+      const debugInfo = {
+        error: errorMsg,
+        environment: isTestMode ? 'Test Mode' : 'Production',
+        https: window.location.protocol === 'https:',
+        url: window.location.href,
+        options: {
+          hasKey: !!options.key,
+          hasAmount: !!options.amount,
+          hasOrderId: !!options.order_id,
+          hasCurrency: !!options.currency
+        }
+      };
+
+      console.error('❌ Razorpay initialization error:', debugInfo);
+
+      // Provide helpful error messages based on the issue
+      let userFriendlyMessage = errorMsg;
+      if (errorMsg.includes('script not loaded') || errorMsg.includes('SDK')) {
+        userFriendlyMessage = 'Payment gateway is loading... Please wait a moment and try again.';
+      } else if (errorMsg.includes('Missing required') || errorMsg.includes('key is missing')) {
+        userFriendlyMessage = 'Payment configuration is incomplete. Please contact support.';
+      } else if (errorMsg.includes('iframe')) {
+        userFriendlyMessage = 'Payment gateway cannot load in an embedded view. Please try again.';
+      }
+
+      reject(new Error(userFriendlyMessage));
     }
   });
 };
