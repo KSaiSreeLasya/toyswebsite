@@ -94,20 +94,46 @@
 </head>
   <body class="funky-pattern">
     <div id="root"></div>
-  <script src="https://checkout.razorpay.com/v1/checkout.js" async defer></script>
   <script>
-    // Ensure Razorpay SDK is ready
+    // Initialize Razorpay SDK loading with proper error handling
     window.__razorpayReady = false;
-    const checkRazorpay = setInterval(() => {
+    window.__razorpayError = null;
+
+    // Create script element with error handling
+    const razorpayScript = document.createElement('script');
+    razorpayScript.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    razorpayScript.async = true;
+    razorpayScript.defer = true;
+
+    razorpayScript.onload = () => {
+      window.__razorpayReady = true;
+      console.log('✅ Razorpay SDK loaded successfully');
+    };
+
+    razorpayScript.onerror = () => {
+      window.__razorpayError = 'Failed to load Razorpay SDK from CDN';
+      console.error('❌ Failed to load Razorpay SDK from CDN');
+    };
+
+    document.head.appendChild(razorpayScript);
+
+    // Fallback check (in case onload doesn't fire)
+    let checkCount = 0;
+    const checkInterval = setInterval(() => {
+      checkCount++;
       if (window.Razorpay) {
         window.__razorpayReady = true;
-        console.log('Razorpay SDK loaded successfully');
-        clearInterval(checkRazorpay);
+        console.log('✅ Razorpay SDK detected');
+        clearInterval(checkInterval);
+      } else if (checkCount > 100) {
+        // 10 seconds passed (100 * 100ms)
+        clearInterval(checkInterval);
+        if (!window.__razorpayError) {
+          window.__razorpayError = 'Razorpay SDK failed to load within timeout';
+          console.error('❌ Razorpay SDK timeout');
+        }
       }
     }, 100);
-
-    // Clear check after 10 seconds
-    setTimeout(() => clearInterval(checkRazorpay), 10000);
   </script>
   <script type="module" src="/index.tsx"></script>
 </body>
