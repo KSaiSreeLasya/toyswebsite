@@ -64,7 +64,14 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
 
     let data;
     try {
-      data = await response.json();
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        console.warn('Response is not JSON:', text);
+        data = { error: 'Invalid server response format' };
+      }
     } catch (parseError) {
       console.error('Failed to parse response:', parseError);
       return { success: false, error: 'Invalid server response. Please try again.' };
