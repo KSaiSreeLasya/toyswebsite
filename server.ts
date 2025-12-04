@@ -10,9 +10,39 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// Add Permissions-Policy header for payment gateway APIs
+// Add security headers for payment gateway APIs and content security
 app.use((req: Request, res: Response, next: Function) => {
-  res.setHeader('Permissions-Policy', 'payment=(*), publickey-credentials-get=(*), clipboard-write=(*), web-share=(*), otp-credentials=(*), publickey-credentials-create=(*)');
+  // Permissions Policy for payment and credential features
+  res.setHeader(
+    'Permissions-Policy',
+    'payment=(*), publickey-credentials-get=(*), clipboard-write=(*), web-share=(*), otp-credentials=(*), publickey-credentials-create=(*), camera=(), microphone=(), geolocation=()'
+  );
+
+  // Content Security Policy for Razorpay and trusted sources
+  const cspHeader = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.razorpay.com https://cdn.tailwindcss.com https://fonts.googleapis.com https://aistudiocdn.com",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com",
+    "img-src 'self' data: https: http:",
+    "font-src 'self' https://fonts.gstatic.com data:",
+    "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com wss: ws:",
+    "frame-src 'self' https://checkout.razorpay.com",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'"
+  ].join('; ');
+
+  res.setHeader('Content-Security-Policy', cspHeader);
+
+  // Additional security headers
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Allow Razorpay requests
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
   next();
 });
 
