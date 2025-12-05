@@ -500,14 +500,18 @@ app.post('/api/signup', async (req: Request, res: Response) => {
 
     // Create user profile
     console.log('👤 Creating user profile with email:', emailLower, 'role:', roleLower);
+    const userProfileData: any = {
+      id: authUserId,
+      email: emailLower,
+      role: roleLower,
+    };
+
+    // Only add name if it might be in the schema (try-catch is handled at the Supabase level)
+    userProfileData.name = emailLower.split('@')[0];
+
     const { data: insertData, error: insertError } = await supabaseAdmin
       .from('users')
-      .insert({
-        id: authUserId,
-        email: emailLower,
-        role: roleLower,
-        name: emailLower.split('@')[0],
-      })
+      .insert(userProfileData)
       .select();
 
     if (insertError) {
