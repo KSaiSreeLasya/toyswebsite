@@ -575,10 +575,7 @@ app.post('/api/signup', async (req: Request, res: Response) => {
     if (insertError) {
       console.error('❌ User profile creation error:', insertError.message);
       console.error('Error details:', insertError);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: insertError.message || 'Failed to create user profile' }));
-      return;
+      return res.status(400).json({ error: insertError.message || 'Failed to create user profile' });
     }
 
     console.log('✅ Signup successful for:', emailLower);
