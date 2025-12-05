@@ -507,10 +507,7 @@ app.post('/api/signup', async (req: Request, res: Response) => {
       console.log('✅ Password hashed successfully');
     } catch (hashError) {
       console.error('❌ Password hashing error:', hashError);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(500);
-      res.send(JSON.stringify({ error: 'Failed to process password' }));
-      return;
+      return res.status(500).json({ error: 'Failed to process password' });
     }
 
     // Create user profile
