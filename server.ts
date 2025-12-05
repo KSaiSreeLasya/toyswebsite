@@ -449,13 +449,19 @@ app.post('/api/signup', async (req: Request, res: Response) => {
 
     if (!email || !password) {
       console.error('❌ Missing email or password');
-      return res.status(400).json({ error: 'Email and password are required' });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(400);
+      res.send(JSON.stringify({ error: 'Email and password are required' }));
+      return;
     }
 
     if (!supabaseAdmin) {
       const errorMsg = `Supabase admin not configured. URL: ${!!supabaseUrl}, Key: ${!!supabaseServiceKey}`;
       console.error('❌', errorMsg);
-      return res.status(500).json({ error: 'Supabase not configured. Contact server admin.' });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(500);
+      res.send(JSON.stringify({ error: 'Supabase not configured. Contact server admin.' }));
+      return;
     }
 
     const emailLower = email.toLowerCase();
@@ -474,7 +480,10 @@ app.post('/api/signup', async (req: Request, res: Response) => {
 
     if (existingUsers && existingUsers.length > 0) {
       console.error('❌ User already exists:', emailLower);
-      return res.status(400).json({ error: 'User with this email already exists' });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(400);
+      res.send(JSON.stringify({ error: 'User with this email already exists' }));
+      return;
     }
 
     // Create auth user
@@ -487,12 +496,18 @@ app.post('/api/signup', async (req: Request, res: Response) => {
 
     if (authError) {
       console.error('❌ Auth creation error:', authError.message);
-      return res.status(400).json({ error: authError.message || 'Failed to create auth user' });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(400);
+      res.send(JSON.stringify({ error: authError.message || 'Failed to create auth user' }));
+      return;
     }
 
     if (!authData?.user) {
       console.error('❌ No user returned from auth creation');
-      return res.status(400).json({ error: 'Failed to create auth user' });
+      res.setHeader('Content-Type', 'application/json');
+      res.status(400);
+      res.send(JSON.stringify({ error: 'Failed to create auth user' }));
+      return;
     }
 
     const authUserId = authData.user.id;
