@@ -63,28 +63,23 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     });
 
     console.log('Signup response status:', response.status);
-    console.log('Signup response headers:', response.headers);
-
-    let data;
     const contentType = response.headers.get('content-type');
     console.log('Content-Type:', contentType);
 
-    if (!contentType || !contentType.includes('application/json')) {
-      try {
-        const responseText = await response.text();
-        console.error('Non-JSON response:', responseText);
-        return { success: false, error: responseText || 'Invalid server response. Please try again.' };
-      } catch (textError) {
-        console.error('Could not read response text:', textError);
-        return { success: false, error: 'Server response was invalid. Please try again.' };
-      }
-    }
-
+    let data;
     try {
-      data = await response.json();
+      const responseText = await response.text();
+      console.log('Raw response text:', responseText);
+
+      if (!responseText) {
+        console.error('Empty response from server');
+        return { success: false, error: 'Empty response from server' };
+      }
+
+      data = JSON.parse(responseText);
       console.log('Parsed response data:', data);
     } catch (parseError) {
-      console.error('Could not parse JSON response:', parseError);
+      console.error('Could not parse response:', parseError);
       return { success: false, error: 'Server returned invalid response. Please try again.' };
     }
 
