@@ -608,17 +608,11 @@ app.post('/api/signup', async (req: Request, res: Response) => {
       role: roleLower
     };
     console.log('📤 Sending response:', JSON.stringify(responseData));
-    res.setHeader('Content-Type', 'application/json');
-    res.status(200);
-    res.send(JSON.stringify(responseData));
-    return;
+    return res.status(200).json(responseData);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('❌ Signup Error:', errorMsg, error);
-    res.setHeader('Content-Type', 'application/json');
-    res.status(500);
-    res.send(JSON.stringify({ error: `Server error: ${errorMsg}` }));
-    return;
+    return res.status(500).json({ error: `Server error: ${errorMsg}` });
   }
 });
 
