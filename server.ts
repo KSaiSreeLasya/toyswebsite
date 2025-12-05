@@ -514,6 +514,20 @@ app.post('/api/signup', async (req: Request, res: Response) => {
     const authUserId = authData.user.id;
     console.log('✅ Auth user created:', authUserId);
 
+    // Hash the password
+    console.log('🔐 Hashing password');
+    let passwordHash: string;
+    try {
+      passwordHash = await bcrypt.hash(password, 10);
+      console.log('✅ Password hashed successfully');
+    } catch (hashError) {
+      console.error('❌ Password hashing error:', hashError);
+      res.setHeader('Content-Type', 'application/json');
+      res.status(500);
+      res.send(JSON.stringify({ error: 'Failed to process password' }));
+      return;
+    }
+
     // Create user profile
     console.log('👤 Creating user profile with email:', emailLower, 'role:', roleLower);
 
@@ -521,38 +535,59 @@ app.post('/api/signup', async (req: Request, res: Response) => {
     let insertError: any = null;
     let insertData: any = null;
 
-    const userProfileWithName = {
+    const userProfileWithAllFields = {
       id: authUserId,
       email: emailLower,
       role: roleLower,
       name: emailLower.split('@')[0],
+      password_hash: passwordHash,
     };
 
-    const { data: dataWithName, error: errorWithName } = await supabaseAdmin
+    const { data: dataWithAllFields, error: errorWithAllFields } = await supabaseAdmin
       .from('users')
-      .insert(userProfileWithName)
+      .insert(userProfileWithAllFields)
       .select();
 
-    if (errorWithName) {
-      console.warn('⚠️ Insert with name failed, trying without name field:', errorWithName.message);
+    if (errorWithAllFields) {
+      console.warn('⚠️ Insert with all fields failed, trying without optional fields:', errorWithAllFields.message);
 
-      // If name field doesn't exist, try without it
-      const userProfileWithoutName = {
+      // If any field doesn't exist, try with just the essentials
+      const userProfileEssential = {
         id: authUserId,
         email: emailLower,
         role: roleLower,
+        password_hash: passwordHash,
       };
 
-      const { data: dataWithoutName, error: errorWithoutName } = await supabaseAdmin
+      const { data: dataEssential, error: errorEssential } = await supabaseAdmin
         .from('users')
-        .insert(userProfileWithoutName)
+        .insert(userProfileEssential)
         .select();
 
-      insertError = errorWithoutName;
-      insertData = dataWithoutName;
+      if (errorEssential) {
+        console.warn('⚠️ Insert without name failed, trying without password_hash:', errorEssential.message);
+
+        // If password_hash field doesn't exist, try without it
+        const userProfileMinimal = {
+          id: authUserId,
+          email: emailLower,
+          role: roleLower,
+        };
+
+        const { data: dataMinimal, error: errorMinimal } = await supabaseAdmin
+          .from('users')
+          .insert(userProfileMinimal)
+          .select();
+
+        insertError = errorMinimal;
+        insertData = dataMinimal;
+      } else {
+        insertError = null;
+        insertData = dataEssential;
+      }
     } else {
       insertError = null;
-      insertData = dataWithName;
+      insertData = dataWithAllFields;
     }
 
     if (insertError) {
