@@ -603,18 +603,12 @@ app.post('/api/signin', async (req: Request, res: Response) => {
 
     if (!email || !password) {
       console.error('❌ Missing email or password');
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: 'Email and password are required' }));
-      return;
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
     if (!supabaseAdmin) {
       console.error('❌ Supabase admin not configured');
-      res.setHeader('Content-Type', 'application/json');
-      res.status(500);
-      res.send(JSON.stringify({ error: 'Supabase not configured. Contact server admin.' }));
-      return;
+      return res.status(500).json({ error: 'Supabase not configured. Contact server admin.' });
     }
 
     const emailLower = email.toLowerCase();
@@ -630,18 +624,12 @@ app.post('/api/signin', async (req: Request, res: Response) => {
 
     if (userError) {
       console.error('❌ User lookup error:', userError.message);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: 'Invalid email or password' }));
-      return;
+      return res.status(400).json({ error: 'Invalid email or password' });
     }
 
     if (!user) {
       console.error('❌ User not found:', emailLower);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: 'Invalid email or password' }));
-      return;
+      return res.status(400).json({ error: 'Invalid email or password' });
     }
 
     // Verify password hash if it exists
@@ -653,10 +641,7 @@ app.post('/api/signin', async (req: Request, res: Response) => {
         passwordValid = await bcrypt.compare(password, user.password_hash);
       } catch (compareError) {
         console.error('❌ Password comparison error:', compareError);
-        res.setHeader('Content-Type', 'application/json');
-        res.status(500);
-        res.send(JSON.stringify({ error: 'Authentication failed' }));
-        return;
+        return res.status(500).json({ error: 'Authentication failed' });
       }
     } else {
       // Fallback to Supabase Auth if password_hash doesn't exist
@@ -678,10 +663,7 @@ app.post('/api/signin', async (req: Request, res: Response) => {
 
     if (!passwordValid) {
       console.error('❌ Invalid password for:', emailLower);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: 'Invalid email or password' }));
-      return;
+      return res.status(400).json({ error: 'Invalid email or password' });
     }
 
     console.log('✅ Signin successful for:', emailLower);
@@ -699,17 +681,11 @@ app.post('/api/signin', async (req: Request, res: Response) => {
       }
     };
     console.log('📤 Sending signin response');
-    res.setHeader('Content-Type', 'application/json');
-    res.status(200);
-    res.send(JSON.stringify(responseData));
-    return;
+    return res.status(200).json(responseData);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('❌ Signin Error:', errorMsg, error);
-    res.setHeader('Content-Type', 'application/json');
-    res.status(500);
-    res.send(JSON.stringify({ error: `Server error: ${errorMsg}` }));
-    return;
+    return res.status(500).json({ error: `Server error: ${errorMsg}` });
   }
 });
 
