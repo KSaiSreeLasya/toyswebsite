@@ -66,14 +66,20 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     const contentType = response.headers.get('content-type');
     console.log('Content-Type:', contentType);
 
+    if (!response.ok) {
+      console.error('Signup response not OK, status:', response.status);
+    }
+
     let data;
     try {
       const responseText = await response.text();
+      console.log('Raw response text length:', responseText?.length || 0);
       console.log('Raw response text:', responseText);
 
-      if (!responseText) {
-        console.error('Empty response from server');
-        return { success: false, error: 'Empty response from server' };
+      if (!responseText || responseText.trim().length === 0) {
+        const errorMsg = response.ok ? 'Empty success response from server' : `Server error (${response.status}): Empty response`;
+        console.error(errorMsg);
+        return { success: false, error: errorMsg };
       }
 
       data = JSON.parse(responseText);
@@ -84,8 +90,8 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     }
 
     if (!response.ok) {
-      const errorMessage = data?.error || 'Signup failed.';
-      console.error('Signup failed with status', response.status, ':', errorMessage);
+      const errorMessage = data?.error || `Request failed with status ${response.status}`;
+      console.error('Signup failed:', errorMessage);
       return { success: false, error: errorMessage };
     }
 
