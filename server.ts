@@ -450,19 +450,13 @@ app.post('/api/signup', async (req: Request, res: Response) => {
 
     if (!email || !password) {
       console.error('❌ Missing email or password');
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: 'Email and password are required' }));
-      return;
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
     if (!supabaseAdmin) {
       const errorMsg = `Supabase admin not configured. URL: ${!!supabaseUrl}, Key: ${!!supabaseServiceKey}`;
       console.error('❌', errorMsg);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(500);
-      res.send(JSON.stringify({ error: 'Supabase not configured. Contact server admin.' }));
-      return;
+      return res.status(500).json({ error: 'Supabase not configured. Contact server admin.' });
     }
 
     const emailLower = email.toLowerCase();
@@ -481,10 +475,7 @@ app.post('/api/signup', async (req: Request, res: Response) => {
 
     if (existingUsers && existingUsers.length > 0) {
       console.error('❌ User already exists:', emailLower);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: 'User with this email already exists' }));
-      return;
+      return res.status(400).json({ error: 'User with this email already exists' });
     }
 
     // Create auth user
@@ -497,18 +488,12 @@ app.post('/api/signup', async (req: Request, res: Response) => {
 
     if (authError) {
       console.error('❌ Auth creation error:', authError.message);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: authError.message || 'Failed to create auth user' }));
-      return;
+      return res.status(400).json({ error: authError.message || 'Failed to create auth user' });
     }
 
     if (!authData?.user) {
       console.error('❌ No user returned from auth creation');
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: 'Failed to create auth user' }));
-      return;
+      return res.status(400).json({ error: 'Failed to create auth user' });
     }
 
     const authUserId = authData.user.id;
@@ -522,10 +507,7 @@ app.post('/api/signup', async (req: Request, res: Response) => {
       console.log('✅ Password hashed successfully');
     } catch (hashError) {
       console.error('❌ Password hashing error:', hashError);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(500);
-      res.send(JSON.stringify({ error: 'Failed to process password' }));
-      return;
+      return res.status(500).json({ error: 'Failed to process password' });
     }
 
     // Create user profile
@@ -593,10 +575,7 @@ app.post('/api/signup', async (req: Request, res: Response) => {
     if (insertError) {
       console.error('❌ User profile creation error:', insertError.message);
       console.error('Error details:', insertError);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: insertError.message || 'Failed to create user profile' }));
-      return;
+      return res.status(400).json({ error: insertError.message || 'Failed to create user profile' });
     }
 
     console.log('✅ Signup successful for:', emailLower);
@@ -608,17 +587,11 @@ app.post('/api/signup', async (req: Request, res: Response) => {
       role: roleLower
     };
     console.log('📤 Sending response:', JSON.stringify(responseData));
-    res.setHeader('Content-Type', 'application/json');
-    res.status(200);
-    res.send(JSON.stringify(responseData));
-    return;
+    return res.status(200).json(responseData);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('❌ Signup Error:', errorMsg, error);
-    res.setHeader('Content-Type', 'application/json');
-    res.status(500);
-    res.send(JSON.stringify({ error: `Server error: ${errorMsg}` }));
-    return;
+    return res.status(500).json({ error: `Server error: ${errorMsg}` });
   }
 });
 
@@ -630,18 +603,12 @@ app.post('/api/signin', async (req: Request, res: Response) => {
 
     if (!email || !password) {
       console.error('❌ Missing email or password');
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: 'Email and password are required' }));
-      return;
+      return res.status(400).json({ error: 'Email and password are required' });
     }
 
     if (!supabaseAdmin) {
       console.error('❌ Supabase admin not configured');
-      res.setHeader('Content-Type', 'application/json');
-      res.status(500);
-      res.send(JSON.stringify({ error: 'Supabase not configured. Contact server admin.' }));
-      return;
+      return res.status(500).json({ error: 'Supabase not configured. Contact server admin.' });
     }
 
     const emailLower = email.toLowerCase();
@@ -657,18 +624,12 @@ app.post('/api/signin', async (req: Request, res: Response) => {
 
     if (userError) {
       console.error('❌ User lookup error:', userError.message);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: 'Invalid email or password' }));
-      return;
+      return res.status(400).json({ error: 'Invalid email or password' });
     }
 
     if (!user) {
       console.error('❌ User not found:', emailLower);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: 'Invalid email or password' }));
-      return;
+      return res.status(400).json({ error: 'Invalid email or password' });
     }
 
     // Verify password hash if it exists
@@ -680,10 +641,7 @@ app.post('/api/signin', async (req: Request, res: Response) => {
         passwordValid = await bcrypt.compare(password, user.password_hash);
       } catch (compareError) {
         console.error('❌ Password comparison error:', compareError);
-        res.setHeader('Content-Type', 'application/json');
-        res.status(500);
-        res.send(JSON.stringify({ error: 'Authentication failed' }));
-        return;
+        return res.status(500).json({ error: 'Authentication failed' });
       }
     } else {
       // Fallback to Supabase Auth if password_hash doesn't exist
@@ -705,10 +663,7 @@ app.post('/api/signin', async (req: Request, res: Response) => {
 
     if (!passwordValid) {
       console.error('❌ Invalid password for:', emailLower);
-      res.setHeader('Content-Type', 'application/json');
-      res.status(400);
-      res.send(JSON.stringify({ error: 'Invalid email or password' }));
-      return;
+      return res.status(400).json({ error: 'Invalid email or password' });
     }
 
     console.log('✅ Signin successful for:', emailLower);
@@ -726,17 +681,11 @@ app.post('/api/signin', async (req: Request, res: Response) => {
       }
     };
     console.log('📤 Sending signin response');
-    res.setHeader('Content-Type', 'application/json');
-    res.status(200);
-    res.send(JSON.stringify(responseData));
-    return;
+    return res.status(200).json(responseData);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('❌ Signin Error:', errorMsg, error);
-    res.setHeader('Content-Type', 'application/json');
-    res.status(500);
-    res.send(JSON.stringify({ error: `Server error: ${errorMsg}` }));
-    return;
+    return res.status(500).json({ error: `Server error: ${errorMsg}` });
   }
 });
 
