@@ -116,81 +116,47 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
 
     console.log('Attempting sign in for:', emailLower, 'with role:', roleLower);
 
-    // Authenticate with Supabase Auth
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email: emailLower,
-      password,
+    // Call backend signin endpoint
+    const response = await fetch('/api/signin', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: emailLower,
+        password,
+        role: roleLower,
+      })
     });
 
-    if (authError) {
-      console.error('Auth error details:', authError?.message || 'Unknown auth error');
-      return { success: false, error: authError.message || 'Authentication failed.' };
-    }
+    console.log('Signin response status:', response.status);
 
-    if (!authData?.user) {
-      return { success: false, error: 'Invalid email or password.' };
-    }
+    let data;
+    try {
+      const responseText = await response.text();
+      console.log('Raw signin response text:', responseText);
 
-    const authUserId = authData.user.id;
-    console.log('Auth successful, user ID:', authUserId);
-
-    // Get user record from users table
-    const { data: user, error: selectError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', authUserId)
-      .single();
-
-    // If user record doesn't exist, create it
-    if (selectError && !user) {
-      console.log('Creating user record for:', emailLower);
-
-      // Try with name field first
-      const { data: newUserWithName, error: insertErrorWithName } = await supabase
-        .from('users')
-        .insert({
-          id: authUserId,
-          email: emailLower,
-          role: roleLower,
-          name: emailLower.split('@')[0],
-        })
-        .select()
-        .single();
-
-      if (insertErrorWithName) {
-        console.warn('⚠️ Insert with name failed, trying without name:', insertErrorWithName?.message);
-
-        // Try without name field
-        const { data: newUserWithoutName, error: insertErrorWithoutName } = await supabase
-          .from('users')
-          .insert({
-            id: authUserId,
-            email: emailLower,
-            role: roleLower,
-          })
-          .select()
-          .single();
-
-        if (insertErrorWithoutName) {
-          console.error('Insert error:', insertErrorWithoutName?.message || 'Unknown insert error');
-          return { success: false, error: 'Failed to create user record.' };
-        }
-
-        console.log('Sign in successful');
-        return { success: true, user: { ...newUserWithoutName, id: authUserId } };
+      if (!responseText || responseText.trim().length === 0) {
+        const errorMsg = response.ok ? 'Empty success response from server' : `Server error (${response.status}): Empty response`;
+        console.error(errorMsg);
+        return { success: false, error: errorMsg };
       }
 
-      console.log('Sign in successful');
-      return { success: true, user: { ...newUserWithName, id: authUserId } };
+      data = JSON.parse(responseText);
+      console.log('Parsed signin response data:', data);
+    } catch (parseError) {
+      console.error('Could not parse signin response:', parseError);
+      return { success: false, error: 'Server returned invalid response. Please try again.' };
     }
 
-    if (selectError && user === null) {
-      console.error('User select error:', selectError?.message || 'Unknown select error');
-      return { success: false, error: 'User not found.' };
+    if (!response.ok) {
+      const errorMessage = data?.error || `Request failed with status ${response.status}`;
+      console.error('Signin failed:', errorMessage);
+      return { success: false, error: errorMessage };
     }
 
     console.log('Sign in successful');
-    return { success: true, user: { ...user, id: authUserId } };
+    return { success: true, user: data.user || { email: emailLower, role: roleLower, name: emailLower.split('@')[0], id: data.userId } };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
     console.error('Unexpected sign in error:', errorMsg);
