@@ -444,16 +444,17 @@ app.post('/api/signup', async (req: Request, res: Response) => {
   try {
     const { email, password, role = 'customer' } = req.body;
 
-    console.log('Signup request received for:', email);
+    console.log('📝 Signup request received for:', email, 'role:', role);
     console.log('Supabase config - URL exists:', !!supabaseUrl, 'Key exists:', !!supabaseServiceKey);
 
     if (!email || !password) {
+      console.error('❌ Missing email or password');
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
     if (!supabaseAdmin) {
       const errorMsg = `Supabase admin not configured. URL: ${!!supabaseUrl}, Key: ${!!supabaseServiceKey}`;
-      console.error(errorMsg);
+      console.error('❌', errorMsg);
       return res.status(500).json({ error: 'Supabase not configured. Contact server admin.' });
     }
 
@@ -461,22 +462,23 @@ app.post('/api/signup', async (req: Request, res: Response) => {
     const roleLower = role.toLowerCase();
 
     // Check if user already exists
-    console.log('Checking if user exists:', emailLower);
+    console.log('🔍 Checking if user exists:', emailLower);
     const { data: existingUsers, error: checkError } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('email', emailLower);
 
     if (checkError) {
-      console.error('Error checking existing user:', checkError.message);
+      console.error('❌ Error checking existing user:', checkError.message);
     }
 
     if (existingUsers && existingUsers.length > 0) {
+      console.error('❌ User already exists:', emailLower);
       return res.status(400).json({ error: 'User with this email already exists' });
     }
 
     // Create auth user
-    console.log('Creating auth user for:', emailLower);
+    console.log('🔐 Creating auth user for:', emailLower);
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: emailLower,
       password,
@@ -484,45 +486,50 @@ app.post('/api/signup', async (req: Request, res: Response) => {
     });
 
     if (authError) {
-      console.error('Auth creation error:', authError.message);
+      console.error('❌ Auth creation error:', authError.message);
       return res.status(400).json({ error: authError.message || 'Failed to create auth user' });
     }
 
     if (!authData?.user) {
-      console.error('No user returned from auth creation');
+      console.error('❌ No user returned from auth creation');
       return res.status(400).json({ error: 'Failed to create auth user' });
     }
 
     const authUserId = authData.user.id;
-    console.log('Auth user created:', authUserId);
+    console.log('✅ Auth user created:', authUserId);
 
     // Create user profile
-    console.log('Creating user profile');
-    const { error: insertError } = await supabaseAdmin
+    console.log('👤 Creating user profile with email:', emailLower, 'role:', roleLower);
+    const { data: insertData, error: insertError } = await supabaseAdmin
       .from('users')
       .insert({
         id: authUserId,
         email: emailLower,
         role: roleLower,
         name: emailLower.split('@')[0],
-      });
+      })
+      .select();
 
     if (insertError) {
-      console.error('User profile creation error:', insertError.message);
+      console.error('❌ User profile creation error:', insertError.message);
+      console.error('Error details:', insertError);
       return res.status(400).json({ error: insertError.message || 'Failed to create user profile' });
     }
 
-    console.log('Signup successful for:', emailLower);
-    res.json({
+    console.log('✅ Signup successful for:', emailLower);
+    const responseData = {
       success: true,
       message: 'Signup successful',
       userId: authUserId,
-      email: emailLower
-    });
+      email: emailLower,
+      role: roleLower
+    };
+    console.log('📤 Sending response:', responseData);
+    res.json(responseData);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    console.error('Signup Error:', errorMsg, error);
-    return res.status(500).json({ error: `Server error: ${errorMsg}` });
+    console.error('❌ Signup Error:', errorMsg, error);
+    res.status(500).json({ error: `Server error: ${errorMsg}` });
   }
 });
 
