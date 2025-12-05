@@ -143,7 +143,9 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     // If user record doesn't exist, create it
     if (selectError && !user) {
       console.log('Creating user record for:', emailLower);
-      const { data: newUser, error: insertError } = await supabase
+
+      // Try with name field first
+      const { data: newUserWithName, error: insertErrorWithName } = await supabase
         .from('users')
         .insert({
           id: authUserId,
@@ -154,13 +156,31 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
         .select()
         .single();
 
-      if (insertError) {
-        console.error('Insert error:', insertError?.message || 'Unknown insert error');
-        return { success: false, error: 'Failed to create user record.' };
+      if (insertErrorWithName) {
+        console.warn('⚠️ Insert with name failed, trying without name:', insertErrorWithName?.message);
+
+        // Try without name field
+        const { data: newUserWithoutName, error: insertErrorWithoutName } = await supabase
+          .from('users')
+          .insert({
+            id: authUserId,
+            email: emailLower,
+            role: roleLower,
+          })
+          .select()
+          .single();
+
+        if (insertErrorWithoutName) {
+          console.error('Insert error:', insertErrorWithoutName?.message || 'Unknown insert error');
+          return { success: false, error: 'Failed to create user record.' };
+        }
+
+        console.log('Sign in successful');
+        return { success: true, user: { ...newUserWithoutName, id: authUserId } };
       }
 
       console.log('Sign in successful');
-      return { success: true, user: { ...newUser, id: authUserId } };
+      return { success: true, user: { ...newUserWithName, id: authUserId } };
     }
 
     if (selectError && user === null) {
