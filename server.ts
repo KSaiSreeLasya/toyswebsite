@@ -500,19 +500,44 @@ app.post('/api/signup', async (req: Request, res: Response) => {
 
     // Create user profile
     console.log('👤 Creating user profile with email:', emailLower, 'role:', roleLower);
-    const userProfileData: any = {
+
+    // Try to insert with all fields first
+    let insertError: any = null;
+    let insertData: any = null;
+
+    const userProfileWithName = {
       id: authUserId,
       email: emailLower,
       role: roleLower,
+      name: emailLower.split('@')[0],
     };
 
-    // Only add name if it might be in the schema (try-catch is handled at the Supabase level)
-    userProfileData.name = emailLower.split('@')[0];
-
-    const { data: insertData, error: insertError } = await supabaseAdmin
+    const { data: dataWithName, error: errorWithName } = await supabaseAdmin
       .from('users')
-      .insert(userProfileData)
+      .insert(userProfileWithName)
       .select();
+
+    if (errorWithName) {
+      console.warn('⚠️ Insert with name failed, trying without name field:', errorWithName.message);
+
+      // If name field doesn't exist, try without it
+      const userProfileWithoutName = {
+        id: authUserId,
+        email: emailLower,
+        role: roleLower,
+      };
+
+      const { data: dataWithoutName, error: errorWithoutName } = await supabaseAdmin
+        .from('users')
+        .insert(userProfileWithoutName)
+        .select();
+
+      insertError = errorWithoutName;
+      insertData = dataWithoutName;
+    } else {
+      insertError = null;
+      insertData = dataWithName;
+    }
 
     if (insertError) {
       console.error('❌ User profile creation error:', insertError.message);
