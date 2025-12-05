@@ -62,34 +62,35 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       })
     });
 
+    console.log('Signup response status:', response.status);
+    console.log('Signup response headers:', response.headers);
+
     let data;
+    const contentType = response.headers.get('content-type');
+    console.log('Content-Type:', contentType);
+
+    if (!contentType || !contentType.includes('application/json')) {
+      try {
+        const responseText = await response.text();
+        console.error('Non-JSON response:', responseText);
+        return { success: false, error: responseText || 'Invalid server response. Please try again.' };
+      } catch (textError) {
+        console.error('Could not read response text:', textError);
+        return { success: false, error: 'Server response was invalid. Please try again.' };
+      }
+    }
+
     try {
-      const responseText = await response.text();
-
-      if (!responseText) {
-        return { success: false, error: 'Empty response from server' };
-      }
-
-      const contentType = response.headers.get('content-type');
-      if (contentType && contentType.includes('application/json')) {
-        try {
-          data = JSON.parse(responseText);
-        } catch (jsonError) {
-          console.error('Failed to parse JSON response:', responseText);
-          return { success: false, error: 'Invalid server response. Please try again.' };
-        }
-      } else {
-        console.warn('Non-JSON response:', responseText);
-        return { success: false, error: responseText.substring(0, 200) };
-      }
+      data = await response.json();
+      console.log('Parsed response data:', data);
     } catch (parseError) {
-      console.error('Could not parse response:', parseError);
-      return { success: false, error: 'Signup failed. Please try again.' };
+      console.error('Could not parse JSON response:', parseError);
+      return { success: false, error: 'Server returned invalid response. Please try again.' };
     }
 
     if (!response.ok) {
       const errorMessage = data?.error || 'Signup failed.';
-      console.error('Signup error:', errorMessage);
+      console.error('Signup failed with status', response.status, ':', errorMessage);
       return { success: false, error: errorMessage };
     }
 
@@ -142,7 +143,9 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     // If user record doesn't exist, create it
     if (selectError && !user) {
       console.log('Creating user record for:', emailLower);
-      const { data: newUser, error: insertError } = await supabase
+
+      // Try with name field first
+      const { data: newUserWithName, error: insertErrorWithName } = await supabase
         .from('users')
         .insert({
           id: authUserId,
@@ -153,13 +156,31 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
         .select()
         .single();
 
-      if (insertError) {
-        console.error('Insert error:', insertError?.message || 'Unknown insert error');
-        return { success: false, error: 'Failed to create user record.' };
+      if (insertErrorWithName) {
+        console.warn('⚠️ Insert with name failed, trying without name:', insertErrorWithName?.message);
+
+        // Try without name field
+        const { data: newUserWithoutName, error: insertErrorWithoutName } = await supabase
+          .from('users')
+          .insert({
+            id: authUserId,
+            email: emailLower,
+            role: roleLower,
+          })
+          .select()
+          .single();
+
+        if (insertErrorWithoutName) {
+          console.error('Insert error:', insertErrorWithoutName?.message || 'Unknown insert error');
+          return { success: false, error: 'Failed to create user record.' };
+        }
+
+        console.log('Sign in successful');
+        return { success: true, user: { ...newUserWithoutName, id: authUserId } };
       }
 
       console.log('Sign in successful');
-      return { success: true, user: { ...newUser, id: authUserId } };
+      return { success: true, user: { ...newUserWithName, id: authUserId } };
     }
 
     if (selectError && user === null) {
