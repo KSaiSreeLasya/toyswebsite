@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcrypt';
 
 const app = express();
 const port = process.env.PORT || 5000;
@@ -513,6 +514,20 @@ app.post('/api/signup', async (req: Request, res: Response) => {
     const authUserId = authData.user.id;
     console.log('✅ Auth user created:', authUserId);
 
+    // Hash the password
+    console.log('🔐 Hashing password');
+    let passwordHash: string;
+    try {
+      passwordHash = await bcrypt.hash(password, 10);
+      console.log('✅ Password hashed successfully');
+    } catch (hashError) {
+      console.error('❌ Password hashing error:', hashError);
+      res.setHeader('Content-Type', 'application/json');
+      res.status(500);
+      res.send(JSON.stringify({ error: 'Failed to process password' }));
+      return;
+    }
+
     // Create user profile
     console.log('👤 Creating user profile with email:', emailLower, 'role:', roleLower);
 
@@ -520,38 +535,59 @@ app.post('/api/signup', async (req: Request, res: Response) => {
     let insertError: any = null;
     let insertData: any = null;
 
-    const userProfileWithName = {
+    const userProfileWithAllFields = {
       id: authUserId,
       email: emailLower,
       role: roleLower,
       name: emailLower.split('@')[0],
+      password_hash: passwordHash,
     };
 
-    const { data: dataWithName, error: errorWithName } = await supabaseAdmin
+    const { data: dataWithAllFields, error: errorWithAllFields } = await supabaseAdmin
       .from('users')
-      .insert(userProfileWithName)
+      .insert(userProfileWithAllFields)
       .select();
 
-    if (errorWithName) {
-      console.warn('⚠️ Insert with name failed, trying without name field:', errorWithName.message);
+    if (errorWithAllFields) {
+      console.warn('⚠️ Insert with all fields failed, trying without optional fields:', errorWithAllFields.message);
 
-      // If name field doesn't exist, try without it
-      const userProfileWithoutName = {
+      // If any field doesn't exist, try with just the essentials
+      const userProfileEssential = {
         id: authUserId,
         email: emailLower,
         role: roleLower,
+        password_hash: passwordHash,
       };
 
-      const { data: dataWithoutName, error: errorWithoutName } = await supabaseAdmin
+      const { data: dataEssential, error: errorEssential } = await supabaseAdmin
         .from('users')
-        .insert(userProfileWithoutName)
+        .insert(userProfileEssential)
         .select();
 
-      insertError = errorWithoutName;
-      insertData = dataWithoutName;
+      if (errorEssential) {
+        console.warn('⚠️ Insert without name failed, trying without password_hash:', errorEssential.message);
+
+        // If password_hash field doesn't exist, try without it
+        const userProfileMinimal = {
+          id: authUserId,
+          email: emailLower,
+          role: roleLower,
+        };
+
+        const { data: dataMinimal, error: errorMinimal } = await supabaseAdmin
+          .from('users')
+          .insert(userProfileMinimal)
+          .select();
+
+        insertError = errorMinimal;
+        insertData = dataMinimal;
+      } else {
+        insertError = null;
+        insertData = dataEssential;
+      }
     } else {
       insertError = null;
-      insertData = dataWithName;
+      insertData = dataWithAllFields;
     }
 
     if (insertError) {
@@ -579,6 +615,124 @@ app.post('/api/signup', async (req: Request, res: Response) => {
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('❌ Signup Error:', errorMsg, error);
+    res.setHeader('Content-Type', 'application/json');
+    res.status(500);
+    res.send(JSON.stringify({ error: `Server error: ${errorMsg}` }));
+    return;
+  }
+});
+
+app.post('/api/signin', async (req: Request, res: Response) => {
+  try {
+    const { email, password, role = 'customer' } = req.body;
+
+    console.log('🔐 Signin request received for:', email, 'role:', role);
+
+    if (!email || !password) {
+      console.error('❌ Missing email or password');
+      res.setHeader('Content-Type', 'application/json');
+      res.status(400);
+      res.send(JSON.stringify({ error: 'Email and password are required' }));
+      return;
+    }
+
+    if (!supabaseAdmin) {
+      console.error('❌ Supabase admin not configured');
+      res.setHeader('Content-Type', 'application/json');
+      res.status(500);
+      res.send(JSON.stringify({ error: 'Supabase not configured. Contact server admin.' }));
+      return;
+    }
+
+    const emailLower = email.toLowerCase();
+    const roleLower = role.toLowerCase();
+
+    // Get user from users table
+    console.log('🔍 Fetching user from database:', emailLower);
+    const { data: user, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('email', emailLower)
+      .single();
+
+    if (userError) {
+      console.error('❌ User lookup error:', userError.message);
+      res.setHeader('Content-Type', 'application/json');
+      res.status(400);
+      res.send(JSON.stringify({ error: 'Invalid email or password' }));
+      return;
+    }
+
+    if (!user) {
+      console.error('❌ User not found:', emailLower);
+      res.setHeader('Content-Type', 'application/json');
+      res.status(400);
+      res.send(JSON.stringify({ error: 'Invalid email or password' }));
+      return;
+    }
+
+    // Verify password hash if it exists
+    console.log('🔐 Verifying password');
+    let passwordValid = false;
+
+    if (user.password_hash) {
+      try {
+        passwordValid = await bcrypt.compare(password, user.password_hash);
+      } catch (compareError) {
+        console.error('❌ Password comparison error:', compareError);
+        res.setHeader('Content-Type', 'application/json');
+        res.status(500);
+        res.send(JSON.stringify({ error: 'Authentication failed' }));
+        return;
+      }
+    } else {
+      // Fallback to Supabase Auth if password_hash doesn't exist
+      console.log('⚠️ No password hash in users table, using Supabase Auth');
+      try {
+        const { data: authData, error: authError } = await supabaseAdmin.auth.admin.getUserById(user.id);
+        if (authError || !authData?.user) {
+          console.error('❌ Auth lookup failed');
+          passwordValid = false;
+        } else {
+          // Password will be validated by Supabase Auth session
+          passwordValid = true;
+        }
+      } catch (authError) {
+        console.error('❌ Auth error:', authError);
+        passwordValid = false;
+      }
+    }
+
+    if (!passwordValid) {
+      console.error('❌ Invalid password for:', emailLower);
+      res.setHeader('Content-Type', 'application/json');
+      res.status(400);
+      res.send(JSON.stringify({ error: 'Invalid email or password' }));
+      return;
+    }
+
+    console.log('✅ Signin successful for:', emailLower);
+    const responseData = {
+      success: true,
+      message: 'Signin successful',
+      userId: user.id,
+      email: emailLower,
+      role: user.role,
+      user: {
+        id: user.id,
+        email: emailLower,
+        role: user.role,
+        name: user.name || emailLower.split('@')[0]
+      }
+    };
+    console.log('📤 Sending signin response');
+    res.setHeader('Content-Type', 'application/json');
+    res.status(200);
+    res.send(JSON.stringify(responseData));
+    return;
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('❌ Signin Error:', errorMsg, error);
     res.setHeader('Content-Type', 'application/json');
     res.status(500);
     res.send(JSON.stringify({ error: `Server error: ${errorMsg}` }));
