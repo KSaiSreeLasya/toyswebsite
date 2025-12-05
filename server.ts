@@ -5,6 +5,7 @@ import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import bcrypt from 'bcrypt';
 
 const app = express();
 const port = process.env.PORT || 5000;
