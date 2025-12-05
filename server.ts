@@ -525,6 +525,7 @@ app.post('/api/signup', async (req: Request, res: Response) => {
       role: roleLower
     };
     console.log('📤 Sending response:', responseData);
+    res.setHeader('Content-Type', 'application/json');
     return res.json(responseData);
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
