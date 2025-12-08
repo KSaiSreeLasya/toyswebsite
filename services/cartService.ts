@@ -79,11 +79,6 @@ export const removeFromCartDatabase = async (userId: string, productId: string):
 
 export const updateCartQuantityDatabase = async (userId: string, productId: string, quantity: number): Promise<boolean> => {
   try {
-    if (!isSupabaseEnabled) {
-      console.log('Supabase not configured, skipping cart sync');
-      return true;
-    }
-
     if (!userId || !isValidUUID(userId)) {
       console.warn('Invalid user ID format, skipping cart sync:', userId);
       return true;
@@ -98,16 +93,22 @@ export const updateCartQuantityDatabase = async (userId: string, productId: stri
       return removeFromCartDatabase(userId, productId);
     }
 
-    const { error } = await supabase
-      .from('cart_items')
-      .update({ quantity })
-      .eq('user_id', userId)
-      .eq('product_id', productId);
+    const response = await fetch('/api/cart/update', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        productId,
+        quantity
+      })
+    });
 
-    if (error) {
-      console.error('Error updating cart quantity:', error?.message || 'Unknown error');
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Error updating cart quantity:', error?.error || 'Unknown error');
       return false;
     }
+
     return true;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
