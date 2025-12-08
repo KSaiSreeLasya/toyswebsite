@@ -146,25 +146,22 @@ export const getCartFromDatabase = async (userId: string): Promise<CartItem[]> =
 
 export const clearCartDatabase = async (userId: string): Promise<boolean> => {
   try {
-    if (!isSupabaseEnabled) {
-      console.log('Supabase not configured, skipping cart sync');
-      return true;
-    }
-
     if (!userId || !isValidUUID(userId)) {
       console.warn('Invalid user ID format, skipping cart sync:', userId);
       return true;
     }
 
-    const { error } = await supabase
-      .from('cart_items')
-      .delete()
-      .eq('user_id', userId);
+    const response = await fetch(`/api/cart/clear/${userId}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
 
-    if (error) {
-      console.error('Error clearing cart:', error?.message || 'Unknown error');
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Error clearing cart:', error?.error || 'Unknown error');
       return false;
     }
+
     return true;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
