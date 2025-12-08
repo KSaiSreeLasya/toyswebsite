@@ -584,10 +584,19 @@ app.post('/api/signup', async (req: Request, res: Response) => {
       message: 'Signup successful',
       userId: authUserId,
       email: emailLower,
-      role: roleLower
+      role: roleLower || 'customer',
+      user: {
+        id: authUserId,
+        email: emailLower,
+        role: roleLower || 'customer',
+        name: emailLower.split('@')[0]
+      }
     };
     console.log('📤 Sending response:', JSON.stringify(responseData));
-    return res.status(200).json(responseData);
+    res.setHeader('Content-Type', 'application/json');
+    const response = res.status(200).json(responseData);
+    console.log('✅ Response sent');
+    return response;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     console.error('❌ Signup Error:', errorMsg, error);
