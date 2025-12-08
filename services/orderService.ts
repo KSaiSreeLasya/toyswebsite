@@ -48,27 +48,3 @@ export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> =>
     return [];
   }
 };
-
-export const updateOrderStatus = async (orderId: string, status: 'pending' | 'packed' | 'shipped' | 'delivered' | 'cancelled'): Promise<boolean> => {
-  try {
-    if (!isSupabaseEnabled) {
-      console.log('Supabase not configured, skipping order status update');
-      return true;
-    }
-
-    const { error } = await supabase
-      .from('orders')
-      .update({ status })
-      .eq('id', orderId);
-
-    if (error) {
-      console.error('Error updating order status:', error?.message || 'Unknown error');
-      return false;
-    }
-    return true;
-  } catch (err) {
-    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-    console.error('Error in updateOrderStatus:', errorMsg);
-    return false;
-  }
-};
