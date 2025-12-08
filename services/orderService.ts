@@ -1,69 +1,24 @@
-import { supabase, isSupabaseEnabled } from './supabaseService';
 import { CartItem, Order } from '../types';
 
 export const createOrderInDatabase = async (userId: string, items: CartItem[], totalInPaise: number): Promise<Order | null> => {
   try {
-    const orderId = `ORD-${Date.now()}`;
-    const totalInRupees = totalInPaise / 100;
-    const coinsEarned = Math.floor(totalInRupees / 100);
-    const discount = Math.floor(totalInRupees * 0.01);
-
-    if (!isSupabaseEnabled) {
-      console.log('Supabase not configured, creating local order only');
-      const order: Order = {
-        id: orderId,
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
         userId,
         items,
-        total: Math.round(totalInRupees * 100) / 100,
-        date: new Date().toISOString(),
-        status: 'pending',
-        coinsEarned,
-        discount
-      };
-      return order;
-    }
+        totalInPaise
+      })
+    });
 
-    const { error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        id: orderId,
-        user_id: userId,
-        total_amount: totalInPaise,
-        status: 'pending'
-      });
-
-    if (orderError) {
-      console.error('Error creating order:', orderError?.message || 'Unknown error');
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Error creating order:', error?.error || 'Unknown error');
       return null;
     }
 
-    for (const item of items) {
-      const { error: itemError } = await supabase
-        .from('order_items')
-        .insert({
-          order_id: orderId,
-          product_id: item.id,
-          product_name: item.name,
-          quantity: item.quantity,
-          unit_price: item.price
-        });
-
-      if (itemError) {
-        console.error('Error creating order item:', itemError?.message || 'Unknown error');
-      }
-    }
-
-    const order: Order = {
-      id: orderId,
-      userId,
-      items,
-      total: Math.round(totalInRupees * 100) / 100,
-      date: new Date().toISOString(),
-      status: 'pending',
-      coinsEarned,
-      discount
-    };
-
+    const order = await response.json();
     return order;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
