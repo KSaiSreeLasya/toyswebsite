@@ -44,11 +44,6 @@ export const addToCartDatabase = async (userId: string, product: CartItem): Prom
 
 export const removeFromCartDatabase = async (userId: string, productId: string): Promise<boolean> => {
   try {
-    if (!isSupabaseEnabled) {
-      console.log('Supabase not configured, skipping cart sync');
-      return true;
-    }
-
     if (!userId || !isValidUUID(userId)) {
       console.warn('Invalid user ID format, skipping cart sync:', userId);
       return true;
@@ -59,16 +54,21 @@ export const removeFromCartDatabase = async (userId: string, productId: string):
       return true;
     }
 
-    const { error } = await supabase
-      .from('cart_items')
-      .delete()
-      .eq('user_id', userId)
-      .eq('product_id', productId);
+    const response = await fetch('/api/cart/remove', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        productId
+      })
+    });
 
-    if (error) {
-      console.error('Error removing from cart:', error?.message || 'Unknown error');
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Error removing from cart:', error?.error || 'Unknown error');
       return false;
     }
+
     return true;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
