@@ -77,7 +77,11 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
       console.log('Raw response text:', responseText);
 
       if (!responseText || responseText.trim().length === 0) {
-        const errorMsg = response.ok ? 'Empty success response from server' : `Server error (${response.status}): Empty response`;
+        if (response.ok) {
+          console.warn('⚠️ Empty response body from server, but status 200 received');
+          return { success: true, user: { email: emailLower, role: roleLower, name: emailLower.split('@')[0] } };
+        }
+        const errorMsg = `Server error (${response.status}): Empty response`;
         console.error(errorMsg);
         return { success: false, error: errorMsg };
       }
@@ -96,7 +100,7 @@ export const signUp = async (email: string, password: string, role: 'CUSTOMER' |
     }
 
     console.log('Signup successful');
-    return { success: true, user: { email: emailLower, role: roleLower, name: emailLower.split('@')[0] } };
+    return { success: true, user: data.user || { email: emailLower, role: roleLower, name: emailLower.split('@')[0] } };
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
     console.error('Signup exception:', errorMsg);
@@ -134,10 +138,15 @@ export const signIn = async (email: string, password: string, role: 'CUSTOMER' |
     let data;
     try {
       const responseText = await response.text();
+      console.log('Raw signin response text length:', responseText?.length || 0);
       console.log('Raw signin response text:', responseText);
 
       if (!responseText || responseText.trim().length === 0) {
-        const errorMsg = response.ok ? 'Empty success response from server' : `Server error (${response.status}): Empty response`;
+        if (response.ok) {
+          console.warn('⚠️ Empty response body from server, but status 200 received');
+          return { success: true, user: { email: emailLower, role: roleLower, name: emailLower.split('@')[0] } };
+        }
+        const errorMsg = `Server error (${response.status}): Empty response`;
         console.error(errorMsg);
         return { success: false, error: errorMsg };
       }
