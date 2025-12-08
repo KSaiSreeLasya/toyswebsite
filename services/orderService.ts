@@ -29,61 +29,19 @@ export const createOrderInDatabase = async (userId: string, items: CartItem[], t
 
 export const getOrdersFromDatabase = async (userId: string): Promise<Order[]> => {
   try {
-    if (!isSupabaseEnabled) {
-      console.log('Supabase not configured, returning empty orders list');
-      return [];
-    }
-
-    const { data, error } = await supabase
-      .from('orders')
-      .select(`
-        id,
-        user_id,
-        total_amount,
-        status,
-        created_at,
-        order_items (
-          product_id,
-          product_name,
-          quantity,
-          unit_price
-        )
-      `)
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching orders:', error?.message || 'Unknown error');
-      return [];
-    }
-
-    return (data || []).map((order: any) => {
-      const totalInPaise = order.total_amount;
-      const totalInRupees = totalInPaise / 100;
-      const coinsEarned = Math.floor(totalInRupees / 100);
-      const discount = Math.floor(totalInRupees * 0.01);
-
-      return {
-        id: order.id,
-        userId: order.user_id,
-        items: order.order_items.map((item: any) => ({
-          id: item.product_id,
-          name: item.product_name,
-          quantity: item.quantity,
-          price: item.unit_price,
-          description: '',
-          category: '',
-          imageUrl: '',
-          rating: 0,
-          stock: 0
-        })),
-        total: Math.round(totalInRupees * 100) / 100,
-        date: order.created_at,
-        status: order.status,
-        coinsEarned,
-        discount
-      };
+    const response = await fetch(`/api/orders/${userId}`, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
     });
+
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Error fetching orders:', error?.error || 'Unknown error');
+      return [];
+    }
+
+    const data = await response.json();
+    return data.orders || [];
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
     console.error('Error in getOrdersFromDatabase:', errorMsg);
