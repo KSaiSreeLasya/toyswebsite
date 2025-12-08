@@ -1038,6 +1038,147 @@ app.post('/api/cart/clear/:userId', async (req: Request, res: Response) => {
   }
 });
 
+// Order endpoints (server-side using admin client to bypass RLS)
+app.post('/api/orders', async (req: Request, res: Response) => {
+  try {
+    const { userId, items, totalInPaise } = req.body;
+
+    if (!supabaseAdmin) {
+      return res.status(500).json({ error: 'Supabase not configured' });
+    }
+
+    if (!userId || !items || !totalInPaise) {
+      return res.status(400).json({ error: 'Missing required fields: userId, items, totalInPaise' });
+    }
+
+    const orderId = `ORD-${Date.now()}`;
+    const totalInRupees = totalInPaise / 100;
+    const coinsEarned = Math.floor(totalInRupees / 100);
+    const discount = Math.floor(totalInRupees * 0.01);
+
+    // Create order
+    const { error: orderError } = await supabaseAdmin
+      .from('orders')
+      .insert({
+        id: orderId,
+        user_id: userId,
+        total_amount: totalInPaise,
+        status: 'pending'
+      });
+
+    if (orderError) {
+      console.error('Error creating order:', orderError.message);
+      return res.status(400).json({ error: orderError.message });
+    }
+
+    // Create order items
+    for (const item of items) {
+      const { error: itemError } = await supabaseAdmin
+        .from('order_items')
+        .insert({
+          order_id: orderId,
+          product_id: item.id,
+          product_name: item.name,
+          quantity: item.quantity,
+          unit_price: item.price
+        });
+
+      if (itemError) {
+        console.error('Error creating order item:', itemError.message);
+      }
+    }
+
+    const order = {
+      id: orderId,
+      userId,
+      items,
+      total: Math.round(totalInRupees * 100) / 100,
+      date: new Date().toISOString(),
+      status: 'pending',
+      coinsEarned,
+      discount
+    };
+
+    console.log('✅ Order created:', orderId);
+    res.json(order);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('Order creation error:', errorMsg);
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
+app.get('/api/orders/:userId', async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    if (!supabaseAdmin) {
+      return res.status(500).json({ error: 'Supabase not configured' });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ error: 'Missing userId parameter' });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('orders')
+      .select(`
+        id,
+        user_id,
+        total_amount,
+        status,
+        created_at,
+        order_items (
+          product_id,
+          product_name,
+          quantity,
+          unit_price
+        )
+      `)
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching orders:', error.message);
+      return res.status(400).json({ error: error.message });
+    }
+
+    const orders = (data || []).map((order: any) => {
+      const totalInPaise = order.total_amount;
+      const totalInRupees = totalInPaise / 100;
+      const coinsEarned = Math.floor(totalInRupees / 100);
+      const discount = Math.floor(totalInRupees * 0.01);
+
+      return {
+        id: order.id,
+        userId: order.user_id,
+        items: order.order_items.map((item: any) => ({
+          id: item.product_id,
+          name: item.product_name,
+          quantity: item.quantity,
+          price: item.unit_price,
+          description: '',
+          category: '',
+          imageUrl: '',
+          rating: 0,
+          stock: 0
+        })),
+        total: Math.round(totalInRupees * 100) / 100,
+        date: order.created_at,
+        status: order.status,
+        coinsEarned,
+        discount
+      };
+    });
+
+    res.json({ orders });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('Order fetch error:', errorMsg);
+    res.status(500).json({ error: errorMsg });
+  }
+});
+
 app.get('/api/health', (req: Request, res: Response) => {
   const razorpayKeyId = process.env.VITE_RAZORPAY_KEY_ID;
   const razorpaySecretKey = process.env.VITE_RAZORPAY_SECRET_KEY;
