@@ -1,4 +1,3 @@
-import { supabase, isSupabaseEnabled } from './supabaseService';
 import { CartItem } from '../types';
 
 const isValidUUID = (id: string): boolean => {
@@ -9,11 +8,6 @@ const isValidUUID = (id: string): boolean => {
 
 export const addToCartDatabase = async (userId: string, product: CartItem): Promise<boolean> => {
   try {
-    if (!isSupabaseEnabled) {
-      console.log('Supabase not configured, skipping cart sync');
-      return true;
-    }
-
     if (!userId || !isValidUUID(userId)) {
       console.warn('Invalid user ID format, skipping cart sync:', userId);
       return true;
@@ -24,18 +18,22 @@ export const addToCartDatabase = async (userId: string, product: CartItem): Prom
       return true;
     }
 
-    const { error } = await supabase
-      .from('cart_items')
-      .upsert({
-        user_id: userId,
-        product_id: product.id,
+    const response = await fetch('/api/cart/add', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId,
+        productId: product.id,
         quantity: product.quantity
-      }, { onConflict: 'user_id,product_id' });
+      })
+    });
 
-    if (error) {
-      console.error('Error adding to cart:', error?.message || 'Unknown error');
+    if (!response.ok) {
+      const error = await response.json();
+      console.error('Error adding to cart:', error?.error || 'Unknown error');
       return false;
     }
+
     return true;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
