@@ -109,11 +109,17 @@ const MyOrders: React.FC = () => {
               {order.items.map((item) => (
                 <div key={item.id} className="order-item">
                   <div className="item-image-container">
-                    <img
-                      src={item.imageUrl}
-                      alt={item.name}
-                      className="item-image"
-                    />
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="item-image"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-400">
+                        <span className="text-xs">No image</span>
+                      </div>
+                    )}
                   </div>
                   <div className="item-details">
                     <p className="item-name">{item.name}</p>
