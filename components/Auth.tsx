@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { UserRole } from '../types';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, Shield, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, Shield, ArrowLeft, CheckCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { initiateGoogleOAuth } from '../services/googleOAuthService';
 
 const Auth: React.FC = () => {
   const { login, signup } = useStore();
@@ -21,6 +22,33 @@ const Auth: React.FC = () => {
   const [resetSent, setResetSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isFacebookLoading, setIsFacebookLoading] = useState(false);
+
+  const handleGoogleSignIn = () => {
+    try {
+      setIsGoogleLoading(true);
+      initiateGoogleOAuth();
+    } catch (error) {
+      setIsGoogleLoading(false);
+      Swal.fire({
+        icon: 'error',
+        title: 'Google Sign In Failed',
+        text: error instanceof Error ? error.message : 'Unable to initiate Google sign in',
+        confirmButtonColor: '#7c3aed',
+      });
+    }
+  };
+
+  const handleFacebookSignIn = () => {
+    // Facebook OAuth coming soon
+    Swal.fire({
+      icon: 'info',
+      title: 'Coming Soon',
+      text: 'Facebook login will be available soon!',
+      confirmButtonColor: '#7c3aed',
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -261,14 +289,71 @@ const Auth: React.FC = () => {
 
           <div className="flex items-center justify-end">
              {view === 'login' && (
-                 <button 
-                    type="button" 
+                 <button
+                    type="button"
                     onClick={() => setView('forgot')}
                     className="text-sm font-bold text-primary-600 hover:text-primary-500 hover:underline"
                  >
                     Forgot Password?
                  </button>
              )}
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500 font-medium">Or continue with</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={isGoogleLoading || isFacebookLoading}
+              className="w-full inline-flex justify-center items-center gap-2 px-4 py-3 border-2 border-gray-200 rounded-xl font-medium text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGoogleLoading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span className="text-sm">Signing in...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="20" fontWeight="bold" fill="currentColor">
+                      G
+                    </text>
+                  </svg>
+                  <span className="text-sm">Google</span>
+                </>
+              )}
+            </button>
+
+            <button
+              type="button"
+              onClick={handleFacebookSignIn}
+              disabled={isGoogleLoading || isFacebookLoading}
+              className="w-full inline-flex justify-center items-center gap-2 px-4 py-3 border-2 border-gray-200 rounded-xl font-medium text-gray-700 hover:border-gray-300 hover:bg-gray-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isFacebookLoading ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  <span className="text-sm">Signing in...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="20" fontWeight="bold" fill="currentColor">
+                      f
+                    </text>
+                  </svg>
+                  <span className="text-sm">Facebook</span>
+                </>
+              )}
+            </button>
           </div>
 
           <div>

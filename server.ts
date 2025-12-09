@@ -849,6 +849,154 @@ app.post('/api/verify-payment', async (req: Request, res: Response) => {
   }
 });
 
+// Google OAuth endpoints
+app.post('/api/auth/google/token', async (req: Request, res: Response) => {
+  try {
+    const { code } = req.body;
+
+    if (!code) {
+      return res.status(400).json({ error: 'Missing authorization code' });
+    }
+
+    const googleClientId = process.env.VITE_GOOGLE_OAUTH_CLIENT_ID;
+    const googleClientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+    const redirectUri = `${process.env.REDIRECT_URI || 'http://localhost:3000'}/auth/google/callback`;
+
+    if (!googleClientId || !googleClientSecret) {
+      console.error('❌ Google OAuth credentials not configured');
+      return res.status(500).json({ error: 'Google OAuth not configured' });
+    }
+
+    console.log('🔐 Exchanging Google authorization code for tokens...');
+
+    // Exchange code for tokens
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        code,
+        client_id: googleClientId,
+        client_secret: googleClientSecret,
+        redirect_uri: redirectUri,
+        grant_type: 'authorization_code',
+      }),
+    });
+
+    if (!tokenResponse.ok) {
+      const error = await tokenResponse.json();
+      console.error('❌ Google token exchange failed:', error);
+      return res.status(400).json({ error: 'Failed to exchange code for tokens' });
+    }
+
+    const tokenData = await tokenResponse.json();
+    const { access_token, id_token } = tokenData;
+
+    if (!access_token || !id_token) {
+      console.error('❌ Missing tokens in response');
+      return res.status(400).json({ error: 'Invalid token response from Google' });
+    }
+
+    // Get user info from Google
+    console.log('👤 Fetching user info from Google...');
+    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: {
+        Authorization: `Bearer ${access_token}`,
+      },
+    });
+
+    if (!userInfoResponse.ok) {
+      console.error('❌ Failed to fetch user info');
+      return res.status(400).json({ error: 'Failed to fetch user info' });
+    }
+
+    const userInfo = await userInfoResponse.json();
+    const { email, name, picture, id: googleId } = userInfo;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email not provided by Google' });
+    }
+
+    console.log('✅ Google user info retrieved:', email);
+
+    // Create or update user in Supabase
+    if (!supabaseAdmin) {
+      return res.status(500).json({ error: 'Supabase not configured' });
+    }
+
+    const emailLower = email.toLowerCase();
+
+    // Check if user exists
+    const { data: existingUser, error: checkError } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('email', emailLower)
+      .single();
+
+    let userId: string;
+
+    if (existingUser) {
+      userId = existingUser.id;
+      console.log('✅ Existing user found:', userId);
+    } else {
+      // Create new user in Supabase Auth (without password)
+      console.log('👤 Creating new Supabase user...');
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: emailLower,
+        user_metadata: {
+          name,
+          picture,
+          google_id: googleId,
+          provider: 'google',
+        },
+        email_confirm: true,
+      });
+
+      if (authError || !authData?.user) {
+        console.error('❌ Failed to create auth user:', authError?.message);
+        return res.status(400).json({ error: 'Failed to create user account' });
+      }
+
+      userId = authData.user.id;
+
+      // Create user profile in users table
+      const { error: profileError } = await supabaseAdmin
+        .from('users')
+        .insert({
+          id: userId,
+          email: emailLower,
+          name: name || emailLower.split('@')[0],
+          role: 'customer',
+          google_id: googleId,
+        });
+
+      if (profileError) {
+        console.error('❌ Failed to create user profile:', profileError.message);
+      }
+
+      console.log('✅ New user created:', userId);
+    }
+
+    // Return user data and tokens
+    res.json({
+      success: true,
+      user: {
+        id: userId,
+        email: emailLower,
+        name: name || emailLower.split('@')[0],
+        picture,
+      },
+      accessToken: access_token,
+      idToken: id_token,
+    });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('❌ Google OAuth Error:', errorMsg);
+    res.status(500).json({ error: 'Authentication failed' });
+  }
+});
+
 // Cart endpoints (server-side using admin client to bypass RLS)
 app.post('/api/cart/add', async (req: Request, res: Response) => {
   try {

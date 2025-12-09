@@ -8,6 +8,7 @@ import Cart from './components/Cart';
 import ProfileDashboard from './components/ProfileDashboard';
 import AdminPanel from './components/AdminPanel';
 import Auth from './components/Auth';
+import GoogleOAuthCallback from './components/GoogleOAuthCallback';
 import ToyGeni from './components/ToyGeni';
 import { UserRole } from './types';
 
@@ -33,6 +34,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/product/:id" element={<ProductDetail />} />
       <Route path="/cart" element={<Cart />} />
       <Route path="/login" element={<Auth />} />
+      <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
       <Route
         path="/profile"
         element={
