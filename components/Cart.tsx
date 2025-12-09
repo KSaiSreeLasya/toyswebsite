@@ -69,15 +69,18 @@ const Cart: React.FC = () => {
     Swal.fire({
       title: '💳 Choose Payment Method',
       html: `
-        <div style="display: flex; gap: 15px; justify-content: center; margin: 20px 0;">
+        <div style="display: flex; gap: 15px; justify-content: center; margin: 20px 0; flex-wrap: wrap;">
           <button id="card-visa" style="padding: 15px 25px; border: 2px solid #1434CB; border-radius: 8px; background: #f0f0f0; cursor: pointer; font-weight: bold; transition: all 0.3s; display: flex; align-items: center; gap: 10px;">
             💳 Visa Card
           </button>
           <button id="card-mastercard" style="padding: 15px 25px; border: 2px solid #EB001B; border-radius: 8px; background: #f0f0f0; cursor: pointer; font-weight: bold; transition: all 0.3s; display: flex; align-items: center; gap: 10px;">
             💳 Mastercard
           </button>
+          <button id="upi-payment" style="padding: 15px 25px; border: 2px solid #5c4399; border-radius: 8px; background: #f0f0f0; cursor: pointer; font-weight: bold; transition: all 0.3s; display: flex; align-items: center; gap: 10px;">
+            📱 UPI
+          </button>
         </div>
-        <p style="font-size: 0.9em; color: #666;">Test Mode - Use any card details</p>
+        <p style="font-size: 0.9em; color: #666;">Test Mode - Use any details</p>
       `,
       confirmButtonText: 'Continue',
       showConfirmButton: false,
@@ -85,6 +88,7 @@ const Cart: React.FC = () => {
       didOpen: () => {
         const visaBtn = document.getElementById('card-visa');
         const mcBtn = document.getElementById('card-mastercard');
+        const upiBtn = document.getElementById('upi-payment');
 
         if (visaBtn) {
           visaBtn.addEventListener('click', () => {
@@ -96,6 +100,13 @@ const Cart: React.FC = () => {
         if (mcBtn) {
           mcBtn.addEventListener('click', () => {
             processPayment('mastercard');
+            Swal.close();
+          });
+        }
+
+        if (upiBtn) {
+          upiBtn.addEventListener('click', () => {
+            processPayment('upi');
             Swal.close();
           });
         }
