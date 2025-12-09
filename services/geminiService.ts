@@ -1,10 +1,8 @@
 import { Product } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-
 export const generateProductDescription = async (productName: string, category: string): Promise<string> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/generate-description`, {
+    const response = await fetch(`/api/generate-description`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -51,7 +49,7 @@ export const generateProductDescription = async (productName: string, category: 
 
 export const getGiftRecommendation = async (query: string, availableProducts: Product[]): Promise<string> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/gift-recommendation`, {
+    const response = await fetch(`/api/gift-recommendation`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
