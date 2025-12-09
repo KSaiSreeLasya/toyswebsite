@@ -232,6 +232,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [user]);
 
+  // Persist wishlist to user-specific key so it survives logout
+  useEffect(() => {
+    if (user && user.id) {
+      const userWishlistKey = `wl_wishlist_${user.id}`;
+      localStorage.setItem(userWishlistKey, JSON.stringify(user.wishlist || []));
+    }
+  }, [user?.id, user?.wishlist]);
+
   const login = async (email: string, password: string, role: UserRole) => {
     try {
       // Validate inputs
