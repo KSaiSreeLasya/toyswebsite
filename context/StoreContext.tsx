@@ -390,13 +390,25 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const setUserFromOAuth = async (userData: any) => {
+    // Load wishlist from user-specific storage
+    const userWishlistKey = `wl_wishlist_${userData.id}`;
+    const storedWishlist = localStorage.getItem(userWishlistKey);
+    let wishlist: string[] = [];
+    if (storedWishlist) {
+      try {
+        wishlist = JSON.parse(storedWishlist);
+      } catch (e) {
+        wishlist = [];
+      }
+    }
+
     const newUser: User = {
       id: userData.id,
       email: userData.email,
       name: userData.name,
       role: userData.role || UserRole.CUSTOMER,
       permissions: userData.permissions || [],
-      wishlist: userData.wishlist || [],
+      wishlist: wishlist,
       coinBalance: userData.coinBalance || 74,
       picture: userData.picture,
       provider: userData.provider
