@@ -128,3 +128,28 @@ export const updateProductStock = async (productId: string, newStock: number): P
     return false;
   }
 };
+
+export const deleteProductFromDatabase = async (productId: string): Promise<boolean> => {
+  try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, skipping product deletion');
+      return true;
+    }
+
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId);
+
+    if (error) {
+      console.error('Error deleting product:', error?.message || 'Unknown error');
+      return false;
+    }
+    console.log(`✅ Deleted product ${productId} from database`);
+    return true;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error deleting product:', errorMsg);
+    return false;
+  }
+};
