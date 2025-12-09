@@ -177,6 +177,65 @@ export const signOut = async (): Promise<void> => {
   await supabase.auth.signOut();
 };
 
+export const signInWithGoogle = async (): Promise<{ success: boolean; error?: string }> => {
+  try {
+    if (!isSupabaseConfigured) {
+      return { success: false, error: 'Supabase not configured' };
+    }
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+        queryParams: {
+          access_type: 'offline',
+          prompt: 'consent',
+        },
+      },
+    });
+
+    if (error) {
+      console.error('Google sign in error:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Google sign in exception:', errorMsg);
+    return { success: false, error: errorMsg };
+  }
+};
+
+export const signInWithFacebook = async (): Promise<{ success: boolean; error?: string }> => {
+  try {
+    if (!isSupabaseConfigured) {
+      return { success: false, error: 'Supabase not configured' };
+    }
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'facebook',
+      options: {
+        redirectTo: `${window.location.origin}/`,
+        queryParams: {
+          display: 'popup',
+        },
+      },
+    });
+
+    if (error) {
+      console.error('Facebook sign in error:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Facebook sign in exception:', errorMsg);
+    return { success: false, error: errorMsg };
+  }
+};
+
 export const initializeAdminUser = async (): Promise<{ success: boolean; message: string }> => {
   try {
     const adminEmail = 'admin@gmail.com';
