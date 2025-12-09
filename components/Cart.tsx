@@ -431,7 +431,13 @@ const Cart: React.FC = () => {
         <h2 className="text-2xl font-bold font-heading mb-6">Shopping Cart</h2>
         {cart.map((item) => (
           <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4 items-center card-pop">
-            <img src={item.imageUrl} alt={item.name} className="w-24 h-24 object-cover rounded-lg bg-gray-50 border border-gray-100" />
+            {item.imageUrl ? (
+              <img src={item.imageUrl} alt={item.name} className="w-24 h-24 object-cover rounded-lg bg-gray-50 border border-gray-100" />
+            ) : (
+              <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400">
+                <span className="text-xs">No image</span>
+              </div>
+            )}
             <div className="flex-1">
               <h3 className="font-bold text-gray-800">{item.name}</h3>
               <p className="text-sm text-gray-500 mb-2">{item.category}</p>
