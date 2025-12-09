@@ -19,7 +19,8 @@ export const syncProductsToDatabase = async (products: Product[]): Promise<boole
           category: product.category,
           image_url: product.imageUrl,
           rating: product.rating,
-          stock: product.stock
+          stock: product.stock,
+          created_at: new Date().toISOString()
         }, { onConflict: 'id' });
 
       if (error) {
@@ -27,10 +28,45 @@ export const syncProductsToDatabase = async (products: Product[]): Promise<boole
         return false;
       }
     }
+    console.log(`✅ Synced ${products.length} products to database`);
     return true;
   } catch (err) {
     const errorMsg = err instanceof Error ? err.message : 'Unknown error';
     console.error('Error syncing products:', errorMsg);
+    return false;
+  }
+};
+
+export const syncSingleProductToDatabase = async (product: Product): Promise<boolean> => {
+  try {
+    if (!isSupabaseEnabled) {
+      console.log('Supabase not configured, skipping product sync');
+      return true;
+    }
+
+    const { error } = await supabase
+      .from('products')
+      .upsert({
+        id: product.id,
+        name: product.name,
+        description: product.description,
+        price: product.price,
+        category: product.category,
+        image_url: product.imageUrl,
+        rating: product.rating,
+        stock: product.stock,
+        created_at: new Date().toISOString()
+      }, { onConflict: 'id' });
+
+    if (error) {
+      console.error(`Error syncing product ${product.id}:`, error?.message || 'Unknown error');
+      return false;
+    }
+    console.log(`✅ Synced product ${product.id} to database`);
+    return true;
+  } catch (err) {
+    const errorMsg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Error syncing product:', errorMsg);
     return false;
   }
 };
