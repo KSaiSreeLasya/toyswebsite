@@ -4,7 +4,8 @@ import { Product, SalesData, UserRole, AdminPermission, User } from '../types';
 import { CATEGORIES } from '../constants';
 import { generateProductDescription } from '../services/geminiService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line } from 'recharts';
-import { Trash2, Plus, Wand2, PackageOpen, DollarSign, Users, Settings, Save, ShieldCheck, Lock, UserPlus, X, Edit, RotateCcw, AlertTriangle, CreditCard, Key } from 'lucide-react';
+import { Trash2, Plus, Wand2, PackageOpen, DollarSign, Users, Settings, Save, ShieldCheck, Lock, UserPlus, X, Edit, RotateCcw, AlertTriangle, CreditCard, Key, Upload, Image } from 'lucide-react';
+import { uploadProductImage } from '../services/imageService';
 
 // Mock Sales Data
 const MOCK_SALES_DATA: SalesData[] = [
@@ -47,9 +48,11 @@ const AdminPanel: React.FC = () => {
     price: 0,
     stock: 0,
     description: '',
-    imageUrl: 'https://picsum.photos/400/400'
+    imageUrl: ''
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   const hasPermission = (perm: AdminPermission) => user?.permissions?.includes(perm) || false;
 
@@ -61,10 +64,44 @@ const AdminPanel: React.FC = () => {
     setIsGenerating(false);
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingImage(true);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImagePreview(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Generate a temporary product ID for the upload
+      const tempProductId = editingId || `temp_${Date.now()}`;
+
+      const uploadedUrl = await uploadProductImage(file, tempProductId);
+
+      if (uploadedUrl) {
+        setNewProduct(prev => ({ ...prev, imageUrl: uploadedUrl }));
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to upload image';
+      alert(`Image upload failed: ${errorMsg}`);
+      setImagePreview('');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProduct.name || !newProduct.price) return;
-    
+    if (!newProduct.name || !newProduct.price || !newProduct.imageUrl) {
+      alert('Please fill in all fields including uploading an image');
+      return;
+    }
+
     if (editingId) {
       // Update Existing Product
       updateProduct({
@@ -74,7 +111,7 @@ const AdminPanel: React.FC = () => {
         price: Number(newProduct.price),
         category: newProduct.category || 'General',
         stock: Number(newProduct.stock) || 0,
-        imageUrl: newProduct.imageUrl || `https://picsum.photos/400/400?random=${Date.now()}`,
+        imageUrl: newProduct.imageUrl,
         rating: (products.find(p => p.id === editingId)?.rating || 5.0)
       } as Product);
       setEditingId(null);
@@ -87,7 +124,7 @@ const AdminPanel: React.FC = () => {
         price: Number(newProduct.price),
         category: newProduct.category || 'General',
         stock: Number(newProduct.stock) || 0,
-        imageUrl: `https://picsum.photos/400/400?random=${Date.now()}`,
+        imageUrl: newProduct.imageUrl,
         rating: 5.0
       } as Product);
     }
@@ -99,8 +136,9 @@ const AdminPanel: React.FC = () => {
       price: 0,
       stock: 0,
       description: '',
-      imageUrl: 'https://picsum.photos/400/400'
+      imageUrl: ''
     });
+    setImagePreview('');
   };
 
   const startEditing = (product: Product) => {
@@ -113,6 +151,7 @@ const AdminPanel: React.FC = () => {
       description: product.description,
       imageUrl: product.imageUrl
     });
+    setImagePreview(product.imageUrl);
     // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -125,8 +164,9 @@ const AdminPanel: React.FC = () => {
       price: 0,
       stock: 0,
       description: '',
-      imageUrl: 'https://picsum.photos/400/400'
+      imageUrl: ''
     });
+    setImagePreview('');
   };
 
   const saveSettings = () => {
@@ -252,7 +292,7 @@ const AdminPanel: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-gray-100">
               <h3 className="text-xl font-heading font-bold text-gray-800 mb-6">Weekly Sales Fun (₹)</h3>
-              <div className="h-64 w-full">
+              <div style={{ width: '100%', height: '300px', minHeight: '300px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={MOCK_SALES_DATA}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -267,7 +307,7 @@ const AdminPanel: React.FC = () => {
 
             <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-gray-100">
               <h3 className="text-xl font-heading font-bold text-gray-800 mb-6">Revenue Rainbow (₹)</h3>
-              <div className="h-64 w-full">
+              <div style={{ width: '100%', height: '300px', minHeight: '300px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={MOCK_SALES_DATA}>
                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -301,6 +341,50 @@ const AdminPanel: React.FC = () => {
               )}
             </h3>
             <form onSubmit={handleSaveProduct} className="space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Image size={16} /> Product Image
+                </label>
+                <div className="mb-3">
+                  <label className="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col items-center justify-center">
+                      <Upload size={24} className="text-gray-400 mb-1" />
+                      <p className="text-sm font-medium text-gray-600">
+                        {isUploadingImage ? 'Uploading...' : 'Click to upload image'}
+                      </p>
+                      <p className="text-xs text-gray-400">PNG, JPG, WebP (max 5MB)</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={isUploadingImage}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                {imagePreview && (
+                  <div className="relative inline-block w-full">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-32 object-cover rounded-xl border-2 border-primary-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImagePreview('');
+                        setNewProduct(prev => ({ ...prev, imageUrl: '' }));
+                      }}
+                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                      title="Remove image"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Name</label>
                 <input

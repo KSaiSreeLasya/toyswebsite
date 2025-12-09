@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Product, CartItem, User, UserRole, Order, AdminPermission, PaymentConfig } from '../types';
 import { INITIAL_PRODUCTS } from '../constants';
 import { signUp, signIn, signOut } from '../services/supabaseService';
-import { syncProductsToDatabase, getProductsFromDatabase } from '../services/productService';
+import { syncProductsToDatabase, getProductsFromDatabase, syncSingleProductToDatabase, deleteProductFromDatabase } from '../services/productService';
 import { addToCartDatabase, removeFromCartDatabase, updateCartQuantityDatabase, getCartFromDatabase, clearCartDatabase } from '../services/cartService';
 import { createOrderInDatabase, getOrdersFromDatabase } from '../services/orderService';
 import { generateUUID } from '../utils/uuid';
@@ -424,14 +424,17 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const addProduct = (product: Product) => {
     setProducts(prev => [...prev, product]);
+    syncSingleProductToDatabase(product).catch(err => console.log('Error syncing product to database:', err));
   };
 
   const updateProduct = (updatedProduct: Product) => {
     setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    syncSingleProductToDatabase(updatedProduct).catch(err => console.log('Error syncing product to database:', err));
   };
 
   const deleteProduct = (productId: string) => {
     setProducts(prev => prev.filter(p => p.id !== productId));
+    deleteProductFromDatabase(productId).catch(err => console.log('Error deleting product from database:', err));
   };
 
   const addTeamMember = (member: User) => {
