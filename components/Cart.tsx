@@ -113,15 +113,17 @@ const Cart: React.FC = () => {
       }
     });
 
-    const processPayment = async (cardType: string) => {
+    const processPayment = async (paymentMethod: string) => {
       setIsProcessing(true);
       try {
         const isTestMode = keyId.startsWith('rzp_test_');
+        const isUPI = paymentMethod === 'upi';
+        const paymentLabel = isUPI ? 'UPI' : (paymentMethod === 'visa' ? 'Visa' : 'Mastercard');
 
         // Show processing alert
         Swal.fire({
           title: '⏳ Processing Payment',
-          html: `<p>Initiating ${cardType === 'visa' ? 'Visa' : 'Mastercard'} payment...</p><p style="font-size: 0.85em; color: #666; margin-top: 10px;">${isTestMode ? '🧪 Test Mode' : '🔒 Production'}</p>`,
+          html: `<p>Initiating ${paymentLabel} payment...</p><p style="font-size: 0.85em; color: #666; margin-top: 10px;">${isTestMode ? '🧪 Test Mode' : '🔒 Production'}</p>`,
           icon: 'info',
           allowOutsideClick: false,
           allowEscapeKey: false,
@@ -133,14 +135,14 @@ const Cart: React.FC = () => {
         // Simulate a short delay for test mode to appear realistic
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        console.log('📦 Creating order for', cardType);
+        console.log('📦 Creating order for', paymentMethod);
         const order = await createRazorpayOrder(
           total,
           `ORD-${Date.now()}`,
           {
             userId: user?.id,
             items: cart.length,
-            cardType,
+            paymentMethod,
             shippingAddress: shippingData
           }
         );
@@ -154,36 +156,60 @@ const Cart: React.FC = () => {
           console.log('🧪 Test mode: Showing simulated payment dialog');
 
           // Show test payment confirmation dialog
-          const testPaymentResult = await Swal.fire({
-            title: '💳 Enter Test Card Details',
-            html: `
-              <div style="text-align: left;">
-                <div style="margin: 20px 0;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: bold;">Card Number</label>
-                  <input id="test-card-number" type="text" placeholder="4111 1111 1111 1111" value="4111 1111 1111 1111" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
-                  <div>
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Expiry</label>
-                    <input id="test-card-expiry" type="text" placeholder="12/25" value="12/25" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
+          let testPaymentResult;
+          if (isUPI) {
+            testPaymentResult = await Swal.fire({
+              title: '📱 Enter Test UPI Details',
+              html: `
+                <div style="text-align: left;">
+                  <div style="margin: 20px 0;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">UPI ID</label>
+                    <input id="test-upi-id" type="text" placeholder="user@upi" value="user@okhdfcbank" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
                   </div>
-                  <div>
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">CVV</label>
-                    <input id="test-card-cvv" type="text" placeholder="123" value="123" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
-                  </div>
+                  <p style="font-size: 0.85em; color: #666; margin-top: 15px; background: #f0f0f0; padding: 10px; border-radius: 4px;">
+                    ✅ Test UPI will be auto-submitted. Click "Confirm Payment" to proceed.
+                  </p>
                 </div>
-                <p style="font-size: 0.85em; color: #666; margin-top: 15px; background: #f0f0f0; padding: 10px; border-radius: 4px;">
-                  ✅ Test card will be auto-submitted. Click "Confirm Payment" to proceed.
-                </p>
-              </div>
-            `,
-            icon: 'info',
-            confirmButtonText: 'Confirm Payment',
-            cancelButtonText: 'Cancel',
-            showCancelButton: true,
-            confirmButtonColor: '#db2777',
-            cancelButtonColor: '#999'
-          });
+              `,
+              icon: 'info',
+              confirmButtonText: 'Confirm Payment',
+              cancelButtonText: 'Cancel',
+              showCancelButton: true,
+              confirmButtonColor: '#5c4399',
+              cancelButtonColor: '#999'
+            });
+          } else {
+            testPaymentResult = await Swal.fire({
+              title: '💳 Enter Test Card Details',
+              html: `
+                <div style="text-align: left;">
+                  <div style="margin: 20px 0;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Card Number</label>
+                    <input id="test-card-number" type="text" placeholder="4111 1111 1111 1111" value="4111 1111 1111 1111" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+                    <div>
+                      <label style="display: block; margin-bottom: 8px; font-weight: bold;">Expiry</label>
+                      <input id="test-card-expiry" type="text" placeholder="12/25" value="12/25" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
+                    </div>
+                    <div>
+                      <label style="display: block; margin-bottom: 8px; font-weight: bold;">CVV</label>
+                      <input id="test-card-cvv" type="text" placeholder="123" value="123" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
+                    </div>
+                  </div>
+                  <p style="font-size: 0.85em; color: #666; margin-top: 15px; background: #f0f0f0; padding: 10px; border-radius: 4px;">
+                    ✅ Test card will be auto-submitted. Click "Confirm Payment" to proceed.
+                  </p>
+                </div>
+              `,
+              icon: 'info',
+              confirmButtonText: 'Confirm Payment',
+              cancelButtonText: 'Cancel',
+              showCancelButton: true,
+              confirmButtonColor: '#db2777',
+              cancelButtonColor: '#999'
+            });
+          }
 
           if (!testPaymentResult.isConfirmed) {
             setIsProcessing(false);
