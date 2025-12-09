@@ -377,7 +377,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setOrders([]);
   };
 
-  const setUserFromOAuth = (userData: any) => {
+  const setUserFromOAuth = async (userData: any) => {
     const newUser: User = {
       id: userData.id,
       email: userData.email,
@@ -391,6 +391,35 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
     setUser(newUser);
     localStorage.setItem('wl_user', JSON.stringify(newUser));
+
+    // Load user's cart from Supabase
+    try {
+      const dbCart = await getCartFromDatabase(newUser.id);
+      if (dbCart.length > 0) {
+        setCart(dbCart);
+        localStorage.setItem('wl_cart', JSON.stringify(dbCart));
+      } else {
+        setCart([]);
+      }
+    } catch (err) {
+      console.log('Error loading cart from database (OAuth):', err);
+      setCart([]);
+    }
+
+    // Load user's orders from Supabase backend
+    try {
+      const dbOrders = await getOrdersFromDatabase(newUser.id);
+      if (dbOrders.length > 0) {
+        setOrders(dbOrders);
+        const userOrdersKey = `wl_orders_${newUser.id}`;
+        localStorage.setItem(userOrdersKey, JSON.stringify(dbOrders));
+      } else {
+        setOrders([]);
+      }
+    } catch (err) {
+      console.log('Error loading orders from database (OAuth):', err);
+      setOrders([]);
+    }
   };
 
   const addToCart = (product: Product) => {
