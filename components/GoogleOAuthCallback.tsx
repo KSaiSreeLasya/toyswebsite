@@ -26,31 +26,7 @@ const GoogleOAuthCallback: React.FC = () => {
 
         console.log('✅ OAuth callback successful:', result.user.email);
 
-        // Store OAuth user data in localStorage for login
-        localStorage.setItem('wl_oauth_user', JSON.stringify({
-          id: result.user.id,
-          email: result.user.email,
-          name: result.user.name,
-          picture: result.user.picture,
-          provider: 'google',
-          accessToken: result.accessToken,
-        }));
-
-        // Auto-login user by setting it directly (since they authenticated via OAuth)
-        // This bypasses the normal email/password login
-        const { setOAuthUser } = useStore() as any;
-
-        // Show success message and redirect
-        await Swal.fire({
-          icon: 'success',
-          title: 'Welcome!',
-          text: `Logged in as ${result.user.email}`,
-          confirmButtonColor: '#10b981',
-          timer: 2000,
-          timerProgressBar: true,
-        });
-
-        // Store minimal user info and redirect
+        // Store minimal user info in localStorage
         localStorage.setItem('wl_user', JSON.stringify({
           id: result.user.id,
           email: result.user.email,
@@ -61,6 +37,16 @@ const GoogleOAuthCallback: React.FC = () => {
           picture: result.user.picture,
           provider: 'google',
         }));
+
+        // Show success message and redirect
+        await Swal.fire({
+          icon: 'success',
+          title: 'Welcome!',
+          text: `Logged in as ${result.user.email}`,
+          confirmButtonColor: '#10b981',
+          timer: 2000,
+          timerProgressBar: true,
+        });
 
         // Redirect to home
         navigate('/');
