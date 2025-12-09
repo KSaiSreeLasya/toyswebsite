@@ -25,6 +25,54 @@ const Auth: React.FC = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isFacebookLoading, setIsFacebookLoading] = useState(false);
 
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const result = await signInWithGoogle();
+      if (!result.success) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Google Sign In Failed',
+          text: result.error || 'Unable to sign in with Google. Please check your Supabase configuration.',
+          confirmButtonColor: '#7c3aed',
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'An unexpected error occurred',
+        confirmButtonColor: '#7c3aed',
+      });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleFacebookSignIn = async () => {
+    setIsFacebookLoading(true);
+    try {
+      const result = await signInWithFacebook();
+      if (!result.success) {
+        Swal.fire({
+          icon: 'error',
+          title: 'Facebook Sign In Failed',
+          text: result.error || 'Unable to sign in with Facebook. Please check your Supabase configuration.',
+          confirmButtonColor: '#7c3aed',
+        });
+      }
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'An unexpected error occurred',
+        confirmButtonColor: '#7c3aed',
+      });
+    } finally {
+      setIsFacebookLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
