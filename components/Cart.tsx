@@ -226,7 +226,7 @@ const Cart: React.FC = () => {
           // Simulate payment processing
           Swal.fire({
             title: '🔐 Processing Payment',
-            html: '<p>Submitting card details...</p>',
+            html: `<p>Submitting ${paymentLabel} details...</p>`,
             icon: 'info',
             allowOutsideClick: false,
             allowEscapeKey: false,
