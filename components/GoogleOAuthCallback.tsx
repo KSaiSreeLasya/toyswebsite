@@ -27,8 +27,8 @@ const GoogleOAuthCallback: React.FC = () => {
 
         console.log('✅ OAuth callback successful:', result.user.email);
 
-        // Set user in StoreContext
-        setUserFromOAuth({
+        // Set user in StoreContext and wait for it to load cart/orders
+        await setUserFromOAuth({
           id: result.user.id,
           email: result.user.email,
           name: result.user.name,
@@ -39,6 +39,8 @@ const GoogleOAuthCallback: React.FC = () => {
           picture: result.user.picture,
           provider: 'google',
         });
+
+        console.log('✅ User data and cart/orders loaded');
 
         // Show success message and redirect
         await Swal.fire({
