@@ -214,7 +214,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     <span className="w-2 h-2 bg-primary-400 rounded-full group-hover:scale-150 transition-transform"></span> Returns & Exchanges
                   </button>
                 </li>
-                <li><a href="#" className="hover:text-primary-600 flex items-center gap-2 group"><span className="w-2 h-2 bg-primary-400 rounded-full group-hover:scale-150 transition-transform"></span> FAQ</a></li>
+                <li><Link to="/faq" className="hover:text-primary-600 flex items-center gap-2 group"><span className="w-2 h-2 bg-primary-400 rounded-full group-hover:scale-150 transition-transform"></span> FAQ</Link></li>
               </ul>
             </div>
             <div>
