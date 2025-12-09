@@ -424,10 +424,12 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const addProduct = (product: Product) => {
     setProducts(prev => [...prev, product]);
+    syncSingleProductToDatabase(product).catch(err => console.log('Error syncing product to database:', err));
   };
 
   const updateProduct = (updatedProduct: Product) => {
     setProducts(prev => prev.map(p => p.id === updatedProduct.id ? updatedProduct : p));
+    syncSingleProductToDatabase(updatedProduct).catch(err => console.log('Error syncing product to database:', err));
   };
 
   const deleteProduct = (productId: string) => {
