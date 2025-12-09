@@ -29,7 +29,7 @@ app.use((req: Request, res: Response, next: Function) => {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com https://checkout.razorpay.com",
     "img-src 'self' data: https: http:",
     "font-src 'self' https://fonts.gstatic.com data:",
-    "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.razorpay.com wss: ws:",
+    "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.razorpay.com https://*.supabase.co wss: ws:",
     "frame-src 'self' https://checkout.razorpay.com https://*.razorpay.com",
     "object-src 'none'",
     "base-uri 'self'",
