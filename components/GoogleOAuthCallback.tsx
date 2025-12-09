@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useStore } from '../context/StoreContext';
 import { handleGoogleOAuthCallback } from '../services/googleOAuthService';
 import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { UserRole } from '../types';
 
 const GoogleOAuthCallback: React.FC = () => {
   const navigate = useNavigate();
+  const { setUserFromOAuth } = useStore();
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
@@ -24,23 +27,24 @@ const GoogleOAuthCallback: React.FC = () => {
 
         console.log('✅ OAuth callback successful:', result.user.email);
 
-        // Store minimal user info in localStorage
-        localStorage.setItem('wl_user', JSON.stringify({
+        // Set user in StoreContext
+        setUserFromOAuth({
           id: result.user.id,
           email: result.user.email,
           name: result.user.name,
-          role: 'customer',
+          role: UserRole.CUSTOMER,
+          permissions: [],
           wishlist: [],
           coinBalance: 74,
           picture: result.user.picture,
           provider: 'google',
-        }));
+        });
 
         // Show success message and redirect
         await Swal.fire({
           icon: 'success',
           title: 'Welcome!',
-          text: `Logged in as ${result.user.email}`,
+          text: `Logged in as ${result.user.name}`,
           confirmButtonColor: '#10b981',
           timer: 2000,
           timerProgressBar: true,
@@ -67,7 +71,7 @@ const GoogleOAuthCallback: React.FC = () => {
     };
 
     processCallback();
-  }, [navigate]);
+  }, [navigate, setUserFromOAuth]);
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center">
