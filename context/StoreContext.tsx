@@ -18,6 +18,7 @@ interface StoreContextType {
   paymentConfig: PaymentConfig;
   login: (email: string, password: string, role: UserRole) => Promise<{ success: boolean; error?: string }>;
   signup: (email: string, password: string, role: UserRole) => Promise<{ success: boolean; error?: string }>;
+  setUserFromOAuth: (userData: any) => void;
   logout: () => Promise<void>;
   addToCart: (product: Product) => void;
   removeFromCart: (productId: string) => void;
@@ -360,6 +361,22 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setOrders([]);
   };
 
+  const setUserFromOAuth = (userData: any) => {
+    const newUser: User = {
+      id: userData.id,
+      email: userData.email,
+      name: userData.name,
+      role: userData.role || UserRole.CUSTOMER,
+      permissions: userData.permissions || [],
+      wishlist: userData.wishlist || [],
+      coinBalance: userData.coinBalance || 74,
+      picture: userData.picture,
+      provider: userData.provider
+    };
+    setUser(newUser);
+    localStorage.setItem('wl_user', JSON.stringify(newUser));
+  };
+
   const addToCart = (product: Product) => {
     if (product.stock <= 0) return; // Prevent adding out of stock
     setCart(prev => {
@@ -517,7 +534,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   return (
     <StoreContext.Provider value={{
-      user, products, cart, orders, teamMembers, login, signup, logout,
+      user, products, cart, orders, teamMembers, login, signup, logout, setUserFromOAuth,
       addToCart, removeFromCart, updateCartQuantity, clearCart,
       addProduct, updateProduct, deleteProduct, placeOrder, addTeamMember, removeTeamMember,
       toggleWishlist, updateUserCoins,
