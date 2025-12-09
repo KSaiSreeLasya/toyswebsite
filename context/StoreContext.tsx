@@ -371,10 +371,16 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const logout = async () => {
+    // Persist wishlist before logout
+    if (user) {
+      const userWishlistKey = `wl_wishlist_${user.id}`;
+      localStorage.setItem(userWishlistKey, JSON.stringify(user.wishlist || []));
+    }
+
     await signOut();
     setUser(null);
     setCart([]);
-    setOrders([]);
+    // Don't clear orders - they'll be fetched from database on next login
   };
 
   const setUserFromOAuth = async (userData: any) => {
