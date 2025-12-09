@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { useStore } from '../context/StoreContext';
 import { UserRole } from '../types';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, Shield, ArrowLeft, CheckCircle, Eye, EyeOff } from 'lucide-react';
+import { Lock, Mail, Shield, ArrowLeft, CheckCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
+import { signInWithGoogle, signInWithFacebook } from '../services/supabaseService';
 
 const Auth: React.FC = () => {
   const { login, signup } = useStore();
