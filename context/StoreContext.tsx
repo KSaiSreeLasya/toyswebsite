@@ -298,32 +298,48 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         if (dbCart.length > 0) {
           setCart(dbCart);
           localStorage.setItem('wl_cart', JSON.stringify(dbCart));
+        } else {
+          setCart([]);
         }
       } catch (err) {
         console.log('Error loading cart from database:', err);
+        setCart([]);
       }
 
-      // Load user's orders from localStorage (user-specific)
+      // Load user's orders from Supabase backend
       try {
-        const userOrdersKey = `wl_orders_${newUser.id}`;
-        const storedUserOrders = localStorage.getItem(userOrdersKey);
-        if (storedUserOrders) {
-          const userOrders = JSON.parse(storedUserOrders);
-          setOrders(userOrders);
+        const dbOrders = await getOrdersFromDatabase(newUser.id);
+        if (dbOrders.length > 0) {
+          setOrders(dbOrders);
+          const userOrdersKey = `wl_orders_${newUser.id}`;
+          localStorage.setItem(userOrdersKey, JSON.stringify(dbOrders));
         } else {
-          // Check if orders exist in old global key and migrate them if they belong to this user
-          const globalOrdersStr = localStorage.getItem('wl_orders');
-          if (globalOrdersStr) {
-            const globalOrders = JSON.parse(globalOrdersStr);
-            const userSpecificOrders = globalOrders.filter((order: Order) => order.userId === newUser.id);
-            if (userSpecificOrders.length > 0) {
-              setOrders(userSpecificOrders);
-              localStorage.setItem(userOrdersKey, JSON.stringify(userSpecificOrders));
-            }
-          }
+          setOrders([]);
         }
       } catch (err) {
-        console.log('Error loading user orders:', err);
+        console.log('Error loading orders from database:', err);
+        // Fallback to localStorage if database fetch fails
+        try {
+          const userOrdersKey = `wl_orders_${newUser.id}`;
+          const storedUserOrders = localStorage.getItem(userOrdersKey);
+          if (storedUserOrders) {
+            const userOrders = JSON.parse(storedUserOrders);
+            setOrders(userOrders);
+          } else {
+            const globalOrdersStr = localStorage.getItem('wl_orders');
+            if (globalOrdersStr) {
+              const globalOrders = JSON.parse(globalOrdersStr);
+              const userSpecificOrders = globalOrders.filter((order: Order) => order.userId === newUser.id);
+              if (userSpecificOrders.length > 0) {
+                setOrders(userSpecificOrders);
+                localStorage.setItem(userOrdersKey, JSON.stringify(userSpecificOrders));
+              }
+            }
+          }
+        } catch (localErr) {
+          console.log('Error loading orders from localStorage:', localErr);
+          setOrders([]);
+        }
       }
 
       return { success: true };
