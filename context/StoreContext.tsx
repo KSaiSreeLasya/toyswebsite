@@ -287,7 +287,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
 
       const newUser: User = existingTeamMember || {
-        id: result.user?.id || generateUUID(),
+        id: userId,
         name: result.user?.name || email.split('@')[0],
         email,
         role,
