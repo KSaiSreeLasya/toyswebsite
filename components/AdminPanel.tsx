@@ -342,6 +342,50 @@ const AdminPanel: React.FC = () => {
             </h3>
             <form onSubmit={handleSaveProduct} className="space-y-4">
               <div>
+                <label className="block text-sm font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Image size={16} /> Product Image
+                </label>
+                <div className="mb-3">
+                  <label className="flex flex-col items-center justify-center w-full p-4 border-2 border-dashed border-gray-300 rounded-xl cursor-pointer hover:bg-gray-50 transition-colors">
+                    <div className="flex flex-col items-center justify-center">
+                      <Upload size={24} className="text-gray-400 mb-1" />
+                      <p className="text-sm font-medium text-gray-600">
+                        {isUploadingImage ? 'Uploading...' : 'Click to upload image'}
+                      </p>
+                      <p className="text-xs text-gray-400">PNG, JPG, WebP (max 5MB)</p>
+                    </div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={isUploadingImage}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+                {imagePreview && (
+                  <div className="relative inline-block w-full">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="w-full h-32 object-cover rounded-xl border-2 border-primary-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImagePreview('');
+                        setNewProduct(prev => ({ ...prev, imageUrl: '' }));
+                      }}
+                      className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full hover:bg-red-600"
+                      title="Remove image"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div>
                 <label className="block text-sm font-bold text-gray-700 mb-1">Name</label>
                 <input
                   required
