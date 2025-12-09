@@ -8,6 +8,7 @@ import Cart from './components/Cart';
 import ProfileDashboard from './components/ProfileDashboard';
 import AdminPanel from './components/AdminPanel';
 import Auth from './components/Auth';
+import GoogleOAuthCallback from './components/GoogleOAuthCallback';
 import ToyGeni from './components/ToyGeni';
 import { UserRole } from './types';
 
