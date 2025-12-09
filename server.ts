@@ -29,7 +29,7 @@ app.use((req: Request, res: Response, next: Function) => {
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com https://checkout.razorpay.com",
     "img-src 'self' data: https: http:",
     "font-src 'self' https://fonts.gstatic.com data:",
-    "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.razorpay.com wss: ws:",
+    "connect-src 'self' https://checkout.razorpay.com https://api.razorpay.com https://*.razorpay.com https://*.supabase.co wss: ws:",
     "frame-src 'self' https://checkout.razorpay.com https://*.razorpay.com",
     "object-src 'none'",
     "base-uri 'self'",
@@ -939,6 +939,22 @@ app.post('/api/auth/google/token', async (req: Request, res: Response) => {
     if (existingUser) {
       userId = existingUser.id;
       console.log('✅ Existing user found:', userId);
+
+      // Update existing user's profile with Google data (name and picture)
+      const { error: updateError } = await supabaseAdmin
+        .from('users')
+        .update({
+          name: name || emailLower.split('@')[0],
+          picture: picture || null,
+          google_id: googleId,
+        })
+        .eq('id', userId);
+
+      if (updateError) {
+        console.warn('⚠️ Failed to update user profile:', updateError.message);
+      } else {
+        console.log('✅ User profile updated with Google data');
+      }
     } else {
       // Create new user in Supabase Auth (without password)
       console.log('👤 Creating new Supabase user...');
@@ -967,6 +983,7 @@ app.post('/api/auth/google/token', async (req: Request, res: Response) => {
           id: userId,
           email: emailLower,
           name: name || emailLower.split('@')[0],
+          picture: picture || null,
           role: 'customer',
           google_id: googleId,
         });
