@@ -434,6 +434,7 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const deleteProduct = (productId: string) => {
     setProducts(prev => prev.filter(p => p.id !== productId));
+    deleteProductFromDatabase(productId).catch(err => console.log('Error deleting product from database:', err));
   };
 
   const addTeamMember = (member: User) => {
