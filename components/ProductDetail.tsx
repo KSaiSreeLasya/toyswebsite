@@ -114,11 +114,17 @@ const ProductDetail: React.FC = () => {
         {/* Product Image Section */}
         <div className="flex flex-col gap-6">
           <div className="relative bg-gray-50 rounded-3xl overflow-hidden flex items-center justify-center min-h-96 border-2 border-gray-100">
-            <img 
-              src={product.imageUrl} 
-              alt={product.name} 
-              className={`w-full h-full object-contain p-8 drop-shadow-lg ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
-            />
+            {product.imageUrl ? (
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                className={`w-full h-full object-contain p-8 drop-shadow-lg ${isOutOfStock ? 'grayscale opacity-60' : ''}`}
+              />
+            ) : (
+              <div className="text-gray-400 text-center">
+                <p className="text-lg font-medium">Image not available</p>
+              </div>
+            )}
             
             {isOutOfStock && (
               <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center">
