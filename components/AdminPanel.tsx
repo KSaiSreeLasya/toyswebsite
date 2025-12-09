@@ -4,7 +4,8 @@ import { Product, SalesData, UserRole, AdminPermission, User } from '../types';
 import { CATEGORIES } from '../constants';
 import { generateProductDescription } from '../services/geminiService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line } from 'recharts';
-import { Trash2, Plus, Wand2, PackageOpen, DollarSign, Users, Settings, Save, ShieldCheck, Lock, UserPlus, X, Edit, RotateCcw, AlertTriangle, CreditCard, Key } from 'lucide-react';
+import { Trash2, Plus, Wand2, PackageOpen, DollarSign, Users, Settings, Save, ShieldCheck, Lock, UserPlus, X, Edit, RotateCcw, AlertTriangle, CreditCard, Key, Upload, Image } from 'lucide-react';
+import { uploadProductImage } from '../services/imageService';
 
 // Mock Sales Data
 const MOCK_SALES_DATA: SalesData[] = [
@@ -47,9 +48,11 @@ const AdminPanel: React.FC = () => {
     price: 0,
     stock: 0,
     description: '',
-    imageUrl: 'https://picsum.photos/400/400'
+    imageUrl: ''
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string>('');
 
   const hasPermission = (perm: AdminPermission) => user?.permissions?.includes(perm) || false;
 
@@ -61,10 +64,44 @@ const AdminPanel: React.FC = () => {
     setIsGenerating(false);
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingImage(true);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setImagePreview(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+
+      // Generate a temporary product ID for the upload
+      const tempProductId = editingId || `temp_${Date.now()}`;
+
+      const uploadedUrl = await uploadProductImage(file, tempProductId);
+
+      if (uploadedUrl) {
+        setNewProduct(prev => ({ ...prev, imageUrl: uploadedUrl }));
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to upload image';
+      alert(`Image upload failed: ${errorMsg}`);
+      setImagePreview('');
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
+
   const handleSaveProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProduct.name || !newProduct.price) return;
-    
+    if (!newProduct.name || !newProduct.price || !newProduct.imageUrl) {
+      alert('Please fill in all fields including uploading an image');
+      return;
+    }
+
     if (editingId) {
       // Update Existing Product
       updateProduct({
@@ -74,7 +111,7 @@ const AdminPanel: React.FC = () => {
         price: Number(newProduct.price),
         category: newProduct.category || 'General',
         stock: Number(newProduct.stock) || 0,
-        imageUrl: newProduct.imageUrl || `https://picsum.photos/400/400?random=${Date.now()}`,
+        imageUrl: newProduct.imageUrl,
         rating: (products.find(p => p.id === editingId)?.rating || 5.0)
       } as Product);
       setEditingId(null);
@@ -87,7 +124,7 @@ const AdminPanel: React.FC = () => {
         price: Number(newProduct.price),
         category: newProduct.category || 'General',
         stock: Number(newProduct.stock) || 0,
-        imageUrl: `https://picsum.photos/400/400?random=${Date.now()}`,
+        imageUrl: newProduct.imageUrl,
         rating: 5.0
       } as Product);
     }
@@ -99,8 +136,9 @@ const AdminPanel: React.FC = () => {
       price: 0,
       stock: 0,
       description: '',
-      imageUrl: 'https://picsum.photos/400/400'
+      imageUrl: ''
     });
+    setImagePreview('');
   };
 
   const startEditing = (product: Product) => {
@@ -113,6 +151,7 @@ const AdminPanel: React.FC = () => {
       description: product.description,
       imageUrl: product.imageUrl
     });
+    setImagePreview(product.imageUrl);
     // Scroll to form
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -125,8 +164,9 @@ const AdminPanel: React.FC = () => {
       price: 0,
       stock: 0,
       description: '',
-      imageUrl: 'https://picsum.photos/400/400'
+      imageUrl: ''
     });
+    setImagePreview('');
   };
 
   const saveSettings = () => {
