@@ -292,7 +292,7 @@ const AdminPanel: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-gray-100">
               <h3 className="text-xl font-heading font-bold text-gray-800 mb-6">Weekly Sales Fun (₹)</h3>
-              <div className="h-64 w-full">
+              <div style={{ width: '100%', height: '300px', minHeight: '300px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={MOCK_SALES_DATA}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
@@ -307,7 +307,7 @@ const AdminPanel: React.FC = () => {
 
             <div className="bg-white p-8 rounded-3xl shadow-sm border-2 border-gray-100">
               <h3 className="text-xl font-heading font-bold text-gray-800 mb-6">Revenue Rainbow (₹)</h3>
-              <div className="h-64 w-full">
+              <div style={{ width: '100%', height: '300px', minHeight: '300px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={MOCK_SALES_DATA}>
                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
