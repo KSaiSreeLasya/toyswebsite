@@ -225,11 +225,17 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onAdd, onToggleWishl
       )}
 
       <div className="relative h-56 overflow-hidden bg-gray-50 p-4 flex items-center justify-center">
-        <img 
-          src={product.imageUrl} 
-          alt={product.name} 
-          className={`w-full h-full object-contain transform group-hover:scale-110 transition-transform duration-500 drop-shadow-md rounded-2xl ${isOutOfStock ? 'grayscale opacity-70' : ''}`} 
-        />
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className={`w-full h-full object-contain transform group-hover:scale-110 transition-transform duration-500 drop-shadow-md rounded-2xl ${isOutOfStock ? 'grayscale opacity-70' : ''}`}
+          />
+        ) : (
+          <div className="text-gray-400 text-center">
+            <p className="text-sm font-medium">Image not available</p>
+          </div>
+        )}
         {!isOutOfStock && (
             <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-black text-gray-800 flex items-center gap-1 shadow-sm border border-gray-100">
             <Star size={14} className="fill-yellow-400 text-yellow-400" /> {product.rating}
