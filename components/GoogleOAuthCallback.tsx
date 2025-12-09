@@ -1,13 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useStore } from '../context/StoreContext';
 import { handleGoogleOAuthCallback } from '../services/googleOAuthService';
 import { Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
 
 const GoogleOAuthCallback: React.FC = () => {
   const navigate = useNavigate();
-  const { user, login } = useStore();
   const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
