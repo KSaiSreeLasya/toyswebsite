@@ -4,7 +4,7 @@ import { UserRole } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Mail, Shield, ArrowLeft, CheckCircle, Eye, EyeOff, Loader2 } from 'lucide-react';
 import Swal from 'sweetalert2';
-import { signInWithGoogle, signInWithFacebook } from '../services/supabaseService';
+import { initiateGoogleOAuth } from '../services/googleOAuthService';
 
 const Auth: React.FC = () => {
   const { login, signup } = useStore();
