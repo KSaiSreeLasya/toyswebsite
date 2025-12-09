@@ -261,20 +261,26 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
       }
 
-      // Try to recover a customer's previous session
-      const storedUserStr = localStorage.getItem('wl_user');
+      // Generate user ID first for localStorage keys
+      const userId = result.user?.id || generateUUID();
+
+      // Recover a customer's previous wishlist from user-specific storage
+      const userWishlistKey = `wl_wishlist_${userId}`;
+      const storedWishlist = localStorage.getItem(userWishlistKey);
       let previousWishlist: string[] = [];
-      if (storedUserStr) {
-          const stored = JSON.parse(storedUserStr);
-          if (stored.email === email) {
-              previousWishlist = stored.wishlist || [];
+      if (storedWishlist) {
+          try {
+              previousWishlist = JSON.parse(storedWishlist);
+          } catch (e) {
+              previousWishlist = [];
           }
       }
 
-      const storedUserStr2 = localStorage.getItem('wl_user');
+      // Recover coin balance from previous session
+      const storedUserStr = localStorage.getItem('wl_user');
       let previousCoinBalance = 74;
-      if (storedUserStr2) {
-          const stored = JSON.parse(storedUserStr2);
+      if (storedUserStr) {
+          const stored = JSON.parse(storedUserStr);
           if (stored.email === email) {
               previousCoinBalance = stored.coinBalance || 74;
           }
