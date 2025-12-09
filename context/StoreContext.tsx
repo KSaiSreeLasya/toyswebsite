@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { Product, CartItem, User, UserRole, Order, AdminPermission, PaymentConfig } from '../types';
 import { INITIAL_PRODUCTS } from '../constants';
 import { signUp, signIn, signOut } from '../services/supabaseService';
-import { syncProductsToDatabase, getProductsFromDatabase, syncSingleProductToDatabase } from '../services/productService';
+import { syncProductsToDatabase, getProductsFromDatabase, syncSingleProductToDatabase, deleteProductFromDatabase } from '../services/productService';
 import { addToCartDatabase, removeFromCartDatabase, updateCartQuantityDatabase, getCartFromDatabase, clearCartDatabase } from '../services/cartService';
 import { createOrderInDatabase, getOrdersFromDatabase } from '../services/orderService';
 import { generateUUID } from '../utils/uuid';
