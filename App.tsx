@@ -10,6 +10,7 @@ import AdminPanel from './components/AdminPanel';
 import Auth from './components/Auth';
 import GoogleOAuthCallback from './components/GoogleOAuthCallback';
 import ToyGeni from './components/ToyGeni';
+import FAQs from './components/FAQs';
 import { UserRole } from './types';
 
 // Protected Route Component
@@ -35,6 +36,7 @@ const AppRoutes: React.FC = () => {
       <Route path="/cart" element={<Cart />} />
       <Route path="/login" element={<Auth />} />
       <Route path="/auth/google/callback" element={<GoogleOAuthCallback />} />
+      <Route path="/faq" element={<FAQs />} />
       <Route
         path="/profile"
         element={
