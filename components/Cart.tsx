@@ -69,15 +69,18 @@ const Cart: React.FC = () => {
     Swal.fire({
       title: '💳 Choose Payment Method',
       html: `
-        <div style="display: flex; gap: 15px; justify-content: center; margin: 20px 0;">
+        <div style="display: flex; gap: 15px; justify-content: center; margin: 20px 0; flex-wrap: wrap;">
           <button id="card-visa" style="padding: 15px 25px; border: 2px solid #1434CB; border-radius: 8px; background: #f0f0f0; cursor: pointer; font-weight: bold; transition: all 0.3s; display: flex; align-items: center; gap: 10px;">
             💳 Visa Card
           </button>
           <button id="card-mastercard" style="padding: 15px 25px; border: 2px solid #EB001B; border-radius: 8px; background: #f0f0f0; cursor: pointer; font-weight: bold; transition: all 0.3s; display: flex; align-items: center; gap: 10px;">
             💳 Mastercard
           </button>
+          <button id="upi-payment" style="padding: 15px 25px; border: 2px solid #5c4399; border-radius: 8px; background: #f0f0f0; cursor: pointer; font-weight: bold; transition: all 0.3s; display: flex; align-items: center; gap: 10px;">
+            📱 UPI
+          </button>
         </div>
-        <p style="font-size: 0.9em; color: #666;">Test Mode - Use any card details</p>
+        <p style="font-size: 0.9em; color: #666;">Test Mode - Use any details</p>
       `,
       confirmButtonText: 'Continue',
       showConfirmButton: false,
@@ -85,6 +88,7 @@ const Cart: React.FC = () => {
       didOpen: () => {
         const visaBtn = document.getElementById('card-visa');
         const mcBtn = document.getElementById('card-mastercard');
+        const upiBtn = document.getElementById('upi-payment');
 
         if (visaBtn) {
           visaBtn.addEventListener('click', () => {
@@ -99,18 +103,27 @@ const Cart: React.FC = () => {
             Swal.close();
           });
         }
+
+        if (upiBtn) {
+          upiBtn.addEventListener('click', () => {
+            processPayment('upi');
+            Swal.close();
+          });
+        }
       }
     });
 
-    const processPayment = async (cardType: string) => {
+    const processPayment = async (paymentMethod: string) => {
       setIsProcessing(true);
       try {
         const isTestMode = keyId.startsWith('rzp_test_');
+        const isUPI = paymentMethod === 'upi';
+        const paymentLabel = isUPI ? 'UPI' : (paymentMethod === 'visa' ? 'Visa' : 'Mastercard');
 
         // Show processing alert
         Swal.fire({
           title: '⏳ Processing Payment',
-          html: `<p>Initiating ${cardType === 'visa' ? 'Visa' : 'Mastercard'} payment...</p><p style="font-size: 0.85em; color: #666; margin-top: 10px;">${isTestMode ? '🧪 Test Mode' : '🔒 Production'}</p>`,
+          html: `<p>Initiating ${paymentLabel} payment...</p><p style="font-size: 0.85em; color: #666; margin-top: 10px;">${isTestMode ? '🧪 Test Mode' : '🔒 Production'}</p>`,
           icon: 'info',
           allowOutsideClick: false,
           allowEscapeKey: false,
@@ -122,14 +135,14 @@ const Cart: React.FC = () => {
         // Simulate a short delay for test mode to appear realistic
         await new Promise(resolve => setTimeout(resolve, 800));
 
-        console.log('📦 Creating order for', cardType);
+        console.log('📦 Creating order for', paymentMethod);
         const order = await createRazorpayOrder(
           total,
           `ORD-${Date.now()}`,
           {
             userId: user?.id,
             items: cart.length,
-            cardType,
+            paymentMethod,
             shippingAddress: shippingData
           }
         );
@@ -143,36 +156,60 @@ const Cart: React.FC = () => {
           console.log('🧪 Test mode: Showing simulated payment dialog');
 
           // Show test payment confirmation dialog
-          const testPaymentResult = await Swal.fire({
-            title: '💳 Enter Test Card Details',
-            html: `
-              <div style="text-align: left;">
-                <div style="margin: 20px 0;">
-                  <label style="display: block; margin-bottom: 8px; font-weight: bold;">Card Number</label>
-                  <input id="test-card-number" type="text" placeholder="4111 1111 1111 1111" value="4111 1111 1111 1111" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
-                </div>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
-                  <div>
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Expiry</label>
-                    <input id="test-card-expiry" type="text" placeholder="12/25" value="12/25" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
+          let testPaymentResult;
+          if (isUPI) {
+            testPaymentResult = await Swal.fire({
+              title: '📱 Enter Test UPI Details',
+              html: `
+                <div style="text-align: left;">
+                  <div style="margin: 20px 0;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">UPI ID</label>
+                    <input id="test-upi-id" type="text" placeholder="user@upi" value="user@okhdfcbank" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
                   </div>
-                  <div>
-                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">CVV</label>
-                    <input id="test-card-cvv" type="text" placeholder="123" value="123" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
-                  </div>
+                  <p style="font-size: 0.85em; color: #666; margin-top: 15px; background: #f0f0f0; padding: 10px; border-radius: 4px;">
+                    ✅ Test UPI will be auto-submitted. Click "Confirm Payment" to proceed.
+                  </p>
                 </div>
-                <p style="font-size: 0.85em; color: #666; margin-top: 15px; background: #f0f0f0; padding: 10px; border-radius: 4px;">
-                  ✅ Test card will be auto-submitted. Click "Confirm Payment" to proceed.
-                </p>
-              </div>
-            `,
-            icon: 'info',
-            confirmButtonText: 'Confirm Payment',
-            cancelButtonText: 'Cancel',
-            showCancelButton: true,
-            confirmButtonColor: '#db2777',
-            cancelButtonColor: '#999'
-          });
+              `,
+              icon: 'info',
+              confirmButtonText: 'Confirm Payment',
+              cancelButtonText: 'Cancel',
+              showCancelButton: true,
+              confirmButtonColor: '#5c4399',
+              cancelButtonColor: '#999'
+            });
+          } else {
+            testPaymentResult = await Swal.fire({
+              title: '💳 Enter Test Card Details',
+              html: `
+                <div style="text-align: left;">
+                  <div style="margin: 20px 0;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Card Number</label>
+                    <input id="test-card-number" type="text" placeholder="4111 1111 1111 1111" value="4111 1111 1111 1111" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+                    <div>
+                      <label style="display: block; margin-bottom: 8px; font-weight: bold;">Expiry</label>
+                      <input id="test-card-expiry" type="text" placeholder="12/25" value="12/25" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
+                    </div>
+                    <div>
+                      <label style="display: block; margin-bottom: 8px; font-weight: bold;">CVV</label>
+                      <input id="test-card-cvv" type="text" placeholder="123" value="123" readonly style="width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; background: #f9f9f9;" />
+                    </div>
+                  </div>
+                  <p style="font-size: 0.85em; color: #666; margin-top: 15px; background: #f0f0f0; padding: 10px; border-radius: 4px;">
+                    ✅ Test card will be auto-submitted. Click "Confirm Payment" to proceed.
+                  </p>
+                </div>
+              `,
+              icon: 'info',
+              confirmButtonText: 'Confirm Payment',
+              cancelButtonText: 'Cancel',
+              showCancelButton: true,
+              confirmButtonColor: '#db2777',
+              cancelButtonColor: '#999'
+            });
+          }
 
           if (!testPaymentResult.isConfirmed) {
             setIsProcessing(false);
@@ -189,7 +226,7 @@ const Cart: React.FC = () => {
           // Simulate payment processing
           Swal.fire({
             title: '🔐 Processing Payment',
-            html: '<p>Submitting card details...</p>',
+            html: `<p>Submitting ${paymentLabel} details...</p>`,
             icon: 'info',
             allowOutsideClick: false,
             allowEscapeKey: false,
@@ -246,7 +283,7 @@ const Cart: React.FC = () => {
               email: user?.email || ''
             },
             notes: {
-              cardType,
+              paymentMethod,
               shippingAddress: shippingData.address,
               city: shippingData.city,
               zipCode: shippingData.zipCode,
@@ -394,7 +431,13 @@ const Cart: React.FC = () => {
         <h2 className="text-2xl font-bold font-heading mb-6">Shopping Cart</h2>
         {cart.map((item) => (
           <div key={item.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex gap-4 items-center card-pop">
-            <img src={item.imageUrl} alt={item.name} className="w-24 h-24 object-cover rounded-lg bg-gray-50 border border-gray-100" />
+            {item.imageUrl ? (
+              <img src={item.imageUrl} alt={item.name} className="w-24 h-24 object-cover rounded-lg bg-gray-50 border border-gray-100" />
+            ) : (
+              <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center text-gray-400">
+                <span className="text-xs">No image</span>
+              </div>
+            )}
             <div className="flex-1">
               <h3 className="font-bold text-gray-800">{item.name}</h3>
               <p className="text-sm text-gray-500 mb-2">{item.category}</p>

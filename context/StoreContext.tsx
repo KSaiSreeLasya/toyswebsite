@@ -232,6 +232,14 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
   }, [user]);
 
+  // Persist wishlist to user-specific key so it survives logout
+  useEffect(() => {
+    if (user && user.id) {
+      const userWishlistKey = `wl_wishlist_${user.id}`;
+      localStorage.setItem(userWishlistKey, JSON.stringify(user.wishlist || []));
+    }
+  }, [user?.id, user?.wishlist]);
+
   const login = async (email: string, password: string, role: UserRole) => {
     try {
       // Validate inputs
@@ -261,27 +269,33 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         }
       }
 
-      // Try to recover a customer's previous session
-      const storedUserStr = localStorage.getItem('wl_user');
+      // Generate user ID first for localStorage keys
+      const userId = result.user?.id || generateUUID();
+
+      // Recover a customer's previous wishlist from user-specific storage
+      const userWishlistKey = `wl_wishlist_${userId}`;
+      const storedWishlist = localStorage.getItem(userWishlistKey);
       let previousWishlist: string[] = [];
-      if (storedUserStr) {
-          const stored = JSON.parse(storedUserStr);
-          if (stored.email === email) {
-              previousWishlist = stored.wishlist || [];
+      if (storedWishlist) {
+          try {
+              previousWishlist = JSON.parse(storedWishlist);
+          } catch (e) {
+              previousWishlist = [];
           }
       }
 
-      const storedUserStr2 = localStorage.getItem('wl_user');
+      // Recover coin balance from previous session
+      const storedUserStr = localStorage.getItem('wl_user');
       let previousCoinBalance = 74;
-      if (storedUserStr2) {
-          const stored = JSON.parse(storedUserStr2);
+      if (storedUserStr) {
+          const stored = JSON.parse(storedUserStr);
           if (stored.email === email) {
               previousCoinBalance = stored.coinBalance || 74;
           }
       }
 
       const newUser: User = existingTeamMember || {
-        id: result.user?.id || generateUUID(),
+        id: userId,
         name: result.user?.name || email.split('@')[0],
         email,
         role,
@@ -298,32 +312,48 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         if (dbCart.length > 0) {
           setCart(dbCart);
           localStorage.setItem('wl_cart', JSON.stringify(dbCart));
+        } else {
+          setCart([]);
         }
       } catch (err) {
         console.log('Error loading cart from database:', err);
+        setCart([]);
       }
 
-      // Load user's orders from localStorage (user-specific)
+      // Load user's orders from Supabase backend
       try {
-        const userOrdersKey = `wl_orders_${newUser.id}`;
-        const storedUserOrders = localStorage.getItem(userOrdersKey);
-        if (storedUserOrders) {
-          const userOrders = JSON.parse(storedUserOrders);
-          setOrders(userOrders);
+        const dbOrders = await getOrdersFromDatabase(newUser.id);
+        if (dbOrders.length > 0) {
+          setOrders(dbOrders);
+          const userOrdersKey = `wl_orders_${newUser.id}`;
+          localStorage.setItem(userOrdersKey, JSON.stringify(dbOrders));
         } else {
-          // Check if orders exist in old global key and migrate them if they belong to this user
-          const globalOrdersStr = localStorage.getItem('wl_orders');
-          if (globalOrdersStr) {
-            const globalOrders = JSON.parse(globalOrdersStr);
-            const userSpecificOrders = globalOrders.filter((order: Order) => order.userId === newUser.id);
-            if (userSpecificOrders.length > 0) {
-              setOrders(userSpecificOrders);
-              localStorage.setItem(userOrdersKey, JSON.stringify(userSpecificOrders));
-            }
-          }
+          setOrders([]);
         }
       } catch (err) {
-        console.log('Error loading user orders:', err);
+        console.log('Error loading orders from database:', err);
+        // Fallback to localStorage if database fetch fails
+        try {
+          const userOrdersKey = `wl_orders_${newUser.id}`;
+          const storedUserOrders = localStorage.getItem(userOrdersKey);
+          if (storedUserOrders) {
+            const userOrders = JSON.parse(storedUserOrders);
+            setOrders(userOrders);
+          } else {
+            const globalOrdersStr = localStorage.getItem('wl_orders');
+            if (globalOrdersStr) {
+              const globalOrders = JSON.parse(globalOrdersStr);
+              const userSpecificOrders = globalOrders.filter((order: Order) => order.userId === newUser.id);
+              if (userSpecificOrders.length > 0) {
+                setOrders(userSpecificOrders);
+                localStorage.setItem(userOrdersKey, JSON.stringify(userSpecificOrders));
+              }
+            }
+          }
+        } catch (localErr) {
+          console.log('Error loading orders from localStorage:', localErr);
+          setOrders([]);
+        }
       }
 
       return { success: true };
@@ -355,26 +385,73 @@ export const StoreProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   const logout = async () => {
+    // Persist wishlist before logout
+    if (user) {
+      const userWishlistKey = `wl_wishlist_${user.id}`;
+      localStorage.setItem(userWishlistKey, JSON.stringify(user.wishlist || []));
+    }
+
     await signOut();
     setUser(null);
     setCart([]);
-    setOrders([]);
+    // Don't clear orders - they'll be fetched from database on next login
   };
 
-  const setUserFromOAuth = (userData: any) => {
+  const setUserFromOAuth = async (userData: any) => {
+    // Load wishlist from user-specific storage
+    const userWishlistKey = `wl_wishlist_${userData.id}`;
+    const storedWishlist = localStorage.getItem(userWishlistKey);
+    let wishlist: string[] = [];
+    if (storedWishlist) {
+      try {
+        wishlist = JSON.parse(storedWishlist);
+      } catch (e) {
+        wishlist = [];
+      }
+    }
+
     const newUser: User = {
       id: userData.id,
       email: userData.email,
       name: userData.name,
       role: userData.role || UserRole.CUSTOMER,
       permissions: userData.permissions || [],
-      wishlist: userData.wishlist || [],
+      wishlist: wishlist,
       coinBalance: userData.coinBalance || 74,
       picture: userData.picture,
       provider: userData.provider
     };
     setUser(newUser);
     localStorage.setItem('wl_user', JSON.stringify(newUser));
+
+    // Load user's cart from Supabase
+    try {
+      const dbCart = await getCartFromDatabase(newUser.id);
+      if (dbCart.length > 0) {
+        setCart(dbCart);
+        localStorage.setItem('wl_cart', JSON.stringify(dbCart));
+      } else {
+        setCart([]);
+      }
+    } catch (err) {
+      console.log('Error loading cart from database (OAuth):', err);
+      setCart([]);
+    }
+
+    // Load user's orders from Supabase backend
+    try {
+      const dbOrders = await getOrdersFromDatabase(newUser.id);
+      if (dbOrders.length > 0) {
+        setOrders(dbOrders);
+        const userOrdersKey = `wl_orders_${newUser.id}`;
+        localStorage.setItem(userOrdersKey, JSON.stringify(dbOrders));
+      } else {
+        setOrders([]);
+      }
+    } catch (err) {
+      console.log('Error loading orders from database (OAuth):', err);
+      setOrders([]);
+    }
   };
 
   const addToCart = (product: Product) => {
