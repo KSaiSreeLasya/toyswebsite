@@ -25,52 +25,29 @@ const Auth: React.FC = () => {
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [isFacebookLoading, setIsFacebookLoading] = useState(false);
 
-  const handleGoogleSignIn = async () => {
-    setIsGoogleLoading(true);
+  const handleGoogleSignIn = () => {
     try {
-      const result = await signInWithGoogle();
-      if (!result.success) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Google Sign In Failed',
-          text: result.error || 'Unable to sign in with Google. Please check your Supabase configuration.',
-          confirmButtonColor: '#7c3aed',
-        });
-      }
-    } catch (err) {
+      setIsGoogleLoading(true);
+      initiateGoogleOAuth();
+    } catch (error) {
+      setIsGoogleLoading(false);
       Swal.fire({
         icon: 'error',
-        title: 'Error',
-        text: 'An unexpected error occurred',
+        title: 'Google Sign In Failed',
+        text: error instanceof Error ? error.message : 'Unable to initiate Google sign in',
         confirmButtonColor: '#7c3aed',
       });
-    } finally {
-      setIsGoogleLoading(false);
     }
   };
 
-  const handleFacebookSignIn = async () => {
-    setIsFacebookLoading(true);
-    try {
-      const result = await signInWithFacebook();
-      if (!result.success) {
-        Swal.fire({
-          icon: 'error',
-          title: 'Facebook Sign In Failed',
-          text: result.error || 'Unable to sign in with Facebook. Please check your Supabase configuration.',
-          confirmButtonColor: '#7c3aed',
-        });
-      }
-    } catch (err) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'An unexpected error occurred',
-        confirmButtonColor: '#7c3aed',
-      });
-    } finally {
-      setIsFacebookLoading(false);
-    }
+  const handleFacebookSignIn = () => {
+    // Facebook OAuth coming soon
+    Swal.fire({
+      icon: 'info',
+      title: 'Coming Soon',
+      text: 'Facebook login will be available soon!',
+      confirmButtonColor: '#7c3aed',
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
