@@ -88,9 +88,17 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 <div className="flex items-center gap-4">
                   <Link
                     to="/profile"
-                    className="flex items-center gap-2 bg-primary-50 px-4 py-2 rounded-full border border-primary-100 hover:border-primary-300 hover:bg-primary-100 transition-colors"
+                    className="flex items-center gap-3 bg-primary-50 px-4 py-2 rounded-full border border-primary-100 hover:border-primary-300 hover:bg-primary-100 transition-colors"
                   >
-                    <User size={20} className="text-primary-400" />
+                    {user.picture ? (
+                      <img
+                        src={user.picture}
+                        alt={user.name}
+                        className="w-6 h-6 rounded-full border-2 border-primary-400 object-cover"
+                      />
+                    ) : (
+                      <User size={20} className="text-primary-400" />
+                    )}
                     <span className="text-sm font-bold text-primary-800">{user.name}</span>
                   </Link>
                   <button
