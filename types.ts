@@ -13,6 +13,8 @@ export interface User {
   permissions?: AdminPermission[];
   wishlist?: string[];
   coinBalance?: number;
+  picture?: string;
+  provider?: string;
 }
 
 export interface Product {
