@@ -283,7 +283,7 @@ const Cart: React.FC = () => {
               email: user?.email || ''
             },
             notes: {
-              cardType,
+              paymentMethod,
               shippingAddress: shippingData.address,
               city: shippingData.city,
               zipCode: shippingData.zipCode,
